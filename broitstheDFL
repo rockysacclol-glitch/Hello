@@ -1,4 +1,4 @@
---// RUSSIAN ROULETTE v4
+--// Hi, me
 
 local Players = game:GetService("Players")
 local TCS = game:GetService("TextChatService")
@@ -16,7 +16,7 @@ local me = lp.UserId
 local env = (getgenv and getgenv()) or _G
 if env.RR_CLEANUP then pcall(env.RR_CLEANUP) end
 
----------------------------------------------------------------- CONFIG (edit me)
+---------------------------------------------------------------- CONFIG
 local CONFIG = {
 	prefix = "~rr~",
 	hideSyncMessages = true,
