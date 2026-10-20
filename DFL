@@ -1,0 +1,2533 @@
+local Players = game:GetService("Players")
+local TCS = game:GetService("TextChatService")
+local RS = game:GetService("ReplicatedStorage")
+local TS = game:GetService("TweenService")
+local HttpService = game:GetService("HttpService")
+local SoundService = game:GetService("SoundService")
+local UIS = game:GetService("UserInputService")
+local CAS = game:GetService("ContextActionService")
+local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
+local lp = Players.LocalPlayer
+local me = lp.UserId
+
+local env = (getgenv and getgenv()) or _G
+if env.RR_CLEANUP then pcall(env.RR_CLEANUP) end
+
+local CONFIG = {
+	prefix = "~rr~",
+	hideSyncMessages = true,
+	toggleKey = Enum.KeyCode.RightShift,
+
+	ntfy = {
+		enabled = true,
+		server = "https://ntfy.sh",
+		topic = "bdwbwbdqhbs",
+		batchDelay = 0.6,
+	},
+
+	relay = {
+		enabled = false,
+		url = "",
+		room = "",
+	},
+
+	rules = {
+		lives = 3,
+		maxLives = 3,
+		maxPlayers = 4,
+		shellsMin = 6, shellsMax = 6,
+		minLive = 1, minBlank = 5,
+		spinOncePerTurn = true,
+		items = true,
+		itemPool = "mbch",
+		itemsPerRound = 2,
+		maxItems = 4,
+	},
+
+	timing = {
+		aim = 2.4,
+		selfAim = 3.0,
+		pause = 1.4,
+		after = 3.0,
+		pass = 1.4,
+		spin = 2.0,
+		item = 2.6,
+		roundIntro = 5.0,
+		botThink = {3, 5},
+	},
+
+	camera = {cinematic = true, fov = 45, letterbox = true},
+	effects = {colorGrade = true, flash = true, shake = true, popups = true},
+
+	deathKillsCharacter = true,
+
+	ragdoll = {
+		getUpTime = 4,
+		force = 25, upForce = 18, spin = 8,
+	},
+
+	gun = {
+		useColt  = true,
+		length   = 1.3,
+		scale    = 1.1,
+		gripFrac = Vector3.new(0.5, 0.32, 0.9),
+		gripNudge = Vector3.new(0, 0, 0),
+		selfYaw  = 72,
+		folder   = "RussianRoulette",
+		file     = "Colt.rbxm",
+		frame    = Color3.fromRGB(45, 45, 50),
+		barrel   = Color3.fromRGB(80, 80, 88),
+		cylinder = Color3.fromRGB(110, 110, 120),
+		grip     = Color3.fromRGB(100, 60, 30),
+	},
+
+	ui = {
+		title = "RUSSIAN ROULETTE",
+		accent = Color3.fromRGB(220, 50, 50),
+		size = UDim2.fromOffset(330, 480),
+		position = UDim2.new(1, -350, 0.5, -240),
+		bannerSize = 34,
+	},
+
+	sfx = {
+		spin  = "rbxassetid://88389157974523",
+		load  = "rbxassetid://99473608044731",
+		click = "rbxassetid://8628978369",
+		shot  = "rbxassetid://104543426818240",
+		hit   = "rbxassetid://139520673393967",
+		win   = "rbxassetid://99098327011653",
+		item  = "rbxassetid://8628978369",
+		death = "rbxassetid://139520673393967",
+
+		bloodImpact = "rbxassetid://139520673393967",
+		lastLife = "rbxassetid://139520673393967",
+		limbHit = "rbxassetid://8628978369",
+		finalImpact = "rbxassetid://139520673393967",
+		debris = "rbxassetid://8628978369",
+		bloodImpactAlt = "rbxassetid://8628978369",
+	},
+	sfxVolume = {
+		spin = 1, load = 1, click = 1, shot = 1, hit = 1, win = 1, item = 1, death = 1,
+		bloodImpact = 0.45, lastLife = 0.8, limbHit = 0.55,
+		finalImpact = 0.9, debris = 0.45, bloodImpactAlt = 0.35,
+	},
+	bloodFX = {
+		enabled = true,
+		dropletCount = 12,
+		dropletSize = 0.13,
+		dropletLifetime = 2.4,
+		impactSoundEnabled = true,
+		impactSoundChance = 0.65,
+		stainsEnabled = true,
+		stainLifetime = 5,
+		stainSize = 0.65,
+		lastLifeBurst = 34,
+		finalDebrisCount = 10,
+		finalDebrisLifetime = 1.4,
+		finalScreenFlash = true,
+	},
+	seating = {
+		forceSit = true,
+		jumpActionName = "RR_BlockJumpWhileSeated",
+		roomTemplateName = "RR_RoomTemplate",
+		chairCountMax = 4,
+	},
+
+	music = {
+		enabled = true,
+		folder = "RussianRoulette",
+		volume = 0.5,
+		fadeIn = 2, fadeOut = 1.5,
+		redownload = false,
+		lifeMode = "self",
+		fallbackKey = "game",
+		tracks = {
+			waiting = {file = "waiting", url = "https://raw.githubusercontent.com/rockysacclol-glitch/Hello/main/club%20ambience1.ogg"},
+			lives3  = {file = "lives3",  url = "https://raw.githubusercontent.com/rockysacclol-glitch/Hello/main/music%20main_room.ogg"},
+			lives2  = {file = "lives2",  url = "https://raw.githubusercontent.com/rockysacclol-glitch/Hello/main/error%20vol3.ogg"},
+			lives1  = {file = "lives1",  url = "https://raw.githubusercontent.com/rockysacclol-glitch/Hello/main/music_helicopter%20vol1.ogg"},
+			dead    = {file = "dead",    url = "https://raw.githubusercontent.com/rockysacclol-glitch/Hello/main/music%20main_you%20are%20presented.ogg"},
+			win     = {file = "win",     url = "https://raw.githubusercontent.com/rockysacclol-glitch/Hello/main/music%20main_glass.ogg"},
+			game    = {file = "game",    url = "https://raw.githubusercontent.com/rockysacclol-glitch/Hello/main/music%20main_techno%20techno.ogg"},
+		},
+	},
+}
+
+local ITEMS = {
+	m = {name = "Magnifier",  desc = "Peek at the current shell (only you see it)"},
+	b = {name = "Beer",       desc = "Eject the current shell"},
+	c = {name = "Cigarette",  desc = "Restore 1 life"},
+	h = {name = "Handcuffs",  desc = "An opponent skips their next turn"},
+}
+
+local T = CONFIG.timing
+local PREFIX = CONFIG.prefix
+local MAX_PLAYERS = CONFIG.rules.maxPlayers
+local USE_RELAY = CONFIG.relay.enabled
+local USE_NTFY = CONFIG.ntfy.enabled and not USE_RELAY
+local NOCHAT = USE_RELAY or USE_NTFY
+
+local alive = true
+local conns = {}
+local function connect(sig, fn) local c = sig:Connect(fn) table.insert(conns, c) return c end
+local function mk(class, props, parent)
+	local o = Instance.new(class)
+	for k, v in pairs(props) do o[k] = v end
+	o.Parent = parent
+	return o
+end
+local B36 = "0123456789abcdefghijklmnopqrstuvwxyz"
+local function enc(n) n = math.floor(n) local s = "" repeat local d = n % 36 s = B36:sub(d + 1, d + 1) .. s n = (n - d) / 36 until n == 0 return s end
+local function dec(s) return tonumber(s, 36) end
+local function split(s, sep) local t = {} for part in (s .. sep):gmatch("(.-)" .. sep) do t[#t + 1] = part end return t end
+local BOT_BASE = 9000000000
+local function isBot(id) return id >= BOT_BASE end
+local function nameOf(id)
+	if isBot(id) then return "Bot " .. (id - BOT_BASE) end
+	local p = Players:GetPlayerByUserId(id)
+	return p and p.DisplayName or "?"
+end
+local function charOf(id) local p = Players:GetPlayerByUserId(id) return p and p.Character end
+local function parseIds(s) local t = {} for _, x in ipairs(split(s or "", ",")) do local n = dec(x) if n then t[#t + 1] = n end end return t end
+local function idsStr(t) local r = {} for _, id in ipairs(t) do r[#r + 1] = enc(id) end return table.concat(r, ",") end
+local function shuffle(t) for i = #t, 2, -1 do local j = math.random(i) t[i], t[j] = t[j], t[i] end end
+local function rand(a, b) return a + math.random() * (b - a) end
+
+local SFX_FALLBACK = {item = "click", death = "hit"}
+local function snd(name, vol, speed)
+	local id = CONFIG.sfx[name] or CONFIG.sfx[SFX_FALLBACK[name] or ""]
+	if not id or id == "" then return end
+	local s = mk("Sound", {SoundId = id, Volume = (CONFIG.sfxVolume[name] or 1) * (vol or 1), PlaybackSpeed = speed or 1}, SoundService)
+	s.Ended:Connect(function() s:Destroy() end)
+	task.delay(10, function() if s.Parent then s:Destroy() end end)
+	s:Play()
+end
+
+local lobbyRefreshAt
+local G, lobby, pending = nil, nil, nil
+local BULLETS_PER_ROUND = 6
+local lobbies = {}
+local HS, shells, hostBusy, spun = nil, {}, false, false
+local cuffPick = false
+local apply, refresh, hostAct, hostPlayerLeft, botTurn, startRound, hostNew, endGame
+
+local roomModel, roomCenter, roomCount, roomOriginalCFrame, roomSeat = nil, nil, 0, nil, nil
+local roomSeatLockConn, roomJumpBound, savedJumpSettings = nil, false, nil
+local roomOldAmbient, roomOldOutdoor, roomOldBrightness
+local function roomPart(parent, name, size, cf, color, material, transparency)
+	return mk("Part", {Name = name, Size = size, CFrame = cf, Anchored = true,
+		CanCollide = true, CanTouch = false, CanQuery = false, CastShadow = true,
+		Color = color, Material = material or Enum.Material.SmoothPlastic,
+		Transparency = transparency or 0, TopSurface = Enum.SurfaceType.Smooth,
+		BottomSurface = Enum.SurfaceType.Smooth}, parent)
+end
+local function stopSeatLock()
+	if roomSeatLockConn then roomSeatLockConn:Disconnect(); roomSeatLockConn = nil end
+	if roomJumpBound then pcall(function() CAS:UnbindAction(CONFIG.seating.jumpActionName) end); roomJumpBound = false end
+	local hum = lp.Character and lp.Character:FindFirstChildOfClass("Humanoid")
+	if hum and savedJumpSettings then
+		pcall(function()
+			hum.JumpPower = savedJumpSettings.jumpPower
+			hum.JumpHeight = savedJumpSettings.jumpHeight
+			hum.AutoRotate = savedJumpSettings.autoRotate
+			hum:SetStateEnabled(Enum.HumanoidStateType.Jumping, savedJumpSettings.jumpingEnabled)
+		end)
+	end
+	savedJumpSettings = nil
+end
+
+local function startSeatLock()
+	if not CONFIG.seating.forceSit or not roomSeat then return end
+	stopSeatLock()
+	local character = lp.Character
+	local hum = character and character:FindFirstChildOfClass("Humanoid")
+	if not hum then return end
+	savedJumpSettings = {jumpPower = hum.JumpPower, jumpHeight = hum.JumpHeight, autoRotate = hum.AutoRotate,
+		jumpingEnabled = hum:GetStateEnabled(Enum.HumanoidStateType.Jumping)}
+	hum.JumpPower, hum.JumpHeight, hum.AutoRotate = 0, 0, false
+	pcall(function() hum:SetStateEnabled(Enum.HumanoidStateType.Jumping, false) end)
+	CAS:BindActionAtPriority(CONFIG.seating.jumpActionName, function() return Enum.ContextActionResult.Sink end,
+		false, Enum.ContextActionPriority.High.Value + 100, Enum.KeyCode.Space, Enum.KeyCode.ButtonA)
+	roomJumpBound = true
+	local lastResit = 0
+	roomSeatLockConn = RunService.Heartbeat:Connect(function()
+		if not alive or not roomModel or not roomSeat or not roomSeat.Parent then stopSeatLock(); return end
+		local c = lp.Character
+		local h = c and c:FindFirstChildOfClass("Humanoid")
+		if not h or h.Health <= 0 then return end
+		if h.SeatPart ~= roomSeat and os.clock() - lastResit > 0.2 then
+			lastResit = os.clock()
+			pcall(function() roomSeat:Sit(h) end)
+		end
+	end)
+end
+
+local function clearRoom(restore)
+	stopSeatLock()
+	if roomModel then roomModel:Destroy() roomModel = nil end
+	if roomSeat then pcall(function() roomSeat:Destroy() end) roomSeat = nil end
+	if restore then
+		if roomOriginalCFrame then
+			local ch = lp.Character
+			local root = ch and ch:FindFirstChild("HumanoidRootPart")
+			local hum = ch and ch:FindFirstChildOfClass("Humanoid")
+			if root then root.CFrame = roomOriginalCFrame end
+			if hum then hum.Sit = false end
+		end
+		roomCenter, roomCount, roomOriginalCFrame = nil, 0, nil
+		if roomOldAmbient then pcall(function() Lighting.Ambient = roomOldAmbient end) end
+		if roomOldOutdoor then pcall(function() Lighting.OutdoorAmbient = roomOldOutdoor end) end
+		if roomOldBrightness then pcall(function() Lighting.Brightness = roomOldBrightness end) end
+		roomOldAmbient, roomOldOutdoor, roomOldBrightness = nil, nil, nil
+	end
+end
+local function updateRoom()
+	if not alive then return end
+	local members = G and G.order or (lobby and lobby.members) or nil
+	if not members or #members == 0 then
+		if roomModel then clearRoom(true) end
+		return
+	end
+	local count = math.clamp(#members, 2, math.min(CONFIG.seating.chairCountMax, math.max(2, MAX_PLAYERS)))
+	local ch = lp.Character
+	local root = ch and ch:FindFirstChild("HumanoidRootPart")
+	if not root then return end
+	if roomModel and roomCount == count then
+		if roomSeat then startSeatLock() end
+		return
+	end
+	local firstBuild = roomModel == nil
+	local oldCenter = roomCenter
+	if roomModel then clearRoom(false) end
+	if firstBuild then
+		roomOriginalCFrame = root.CFrame
+		roomCenter = root.Position + root.CFrame.LookVector * 5
+		roomOldAmbient, roomOldOutdoor, roomOldBrightness = Lighting.Ambient, Lighting.OutdoorAmbient, Lighting.Brightness
+	end
+	local center = roomCenter or oldCenter or root.Position
+	roomCenter = center
+	roomCount = count
+	local template = workspace:FindFirstChild(CONFIG.seating.roomTemplateName) or workspace:FindFirstChild("Room")
+	local importedRoom = template and template:IsA("Model")
+	local chairTemplate = importedRoom and template:FindFirstChild("Chair4", true) or nil
+	if chairTemplate and not (chairTemplate:IsA("Model") or chairTemplate:IsA("BasePart")) then chairTemplate = nil end
+	roomModel = importedRoom and template:Clone() or Instance.new("Model")
+	roomModel.Name = "RR_LocalDarkRoom"
+	roomModel.Parent = workspace
+	if importedRoom then
+		local pivot = roomModel:GetPivot()
+		roomModel:PivotTo(CFrame.new(center) * (pivot - pivot.Position))
+		local templateChairCopy = roomModel:FindFirstChild("Chair4", true)
+		if templateChairCopy then templateChairCopy:Destroy() end
+	end
+	local floorY = center.Y - 3
+	local radius = math.max(10, count * 1.8 + 5)
+	local wallH = 10
+	local dark = Color3.fromRGB(16, 16, 20)
+	local tableRadius = math.clamp(2.4 + count * 0.22, 2.8, 4.5)
+	if importedRoom then
+		pcall(function()
+			local boxCF, boxSize = roomModel:GetBoundingBox()
+			floorY = boxCF.Position.Y - boxSize.Y * 0.5
+			local tableObj = roomModel:FindFirstChild("Table", true)
+			if tableObj then
+				local tableSize
+				if tableObj:IsA("Model") then local _, size = tableObj:GetBoundingBox(); tableSize = size
+				elseif tableObj:IsA("BasePart") then tableSize = tableObj.Size end
+				if tableSize then tableRadius = math.clamp(math.max(tableSize.X, tableSize.Z) * 0.5, 2.2, 5.5) end
+			end
+		end)
+	end
+	if not importedRoom then
+		roomPart(roomModel, "Floor", Vector3.new(radius * 2, 1, radius * 2), CFrame.new(center.X, floorY, center.Z), Color3.fromRGB(25, 24, 27), Enum.Material.Slate)
+		roomPart(roomModel, "Ceiling", Vector3.new(radius * 2, 1, radius * 2), CFrame.new(center.X, floorY + wallH, center.Z), Color3.fromRGB(10, 10, 13), Enum.Material.Slate)
+		roomPart(roomModel, "NorthWall", Vector3.new(radius * 2, wallH, 1), CFrame.new(center.X, floorY + wallH/2, center.Z - radius), dark, Enum.Material.Slate)
+		roomPart(roomModel, "SouthWall", Vector3.new(radius * 2, wallH, 1), CFrame.new(center.X, floorY + wallH/2, center.Z + radius), dark, Enum.Material.Slate)
+		roomPart(roomModel, "WestWall", Vector3.new(1, wallH, radius * 2), CFrame.new(center.X - radius, floorY + wallH/2, center.Z), dark, Enum.Material.Slate)
+		roomPart(roomModel, "EastWall", Vector3.new(1, wallH, radius * 2), CFrame.new(center.X + radius, floorY + wallH/2, center.Z), dark, Enum.Material.Slate)
+		local tableTop = floorY + 3.1
+		local tablePart = roomPart(roomModel, "RoundTableTop", Vector3.new(tableRadius * 2, 0.45, tableRadius * 2), CFrame.new(center.X, tableTop, center.Z), Color3.fromRGB(48, 29, 24), Enum.Material.Wood)
+		tablePart.Shape = Enum.PartType.Cylinder
+		tablePart.CFrame = CFrame.new(center.X, tableTop, center.Z) * CFrame.Angles(0, 0, math.rad(90))
+		local leg = roomPart(roomModel, "TablePedestal", Vector3.new(1.1, 2.5, 1.1), CFrame.new(center.X, tableTop - 1.45, center.Z), Color3.fromRGB(32, 25, 23), Enum.Material.Wood)
+		leg.Shape = Enum.PartType.Cylinder
+		leg.CFrame = CFrame.new(center.X, tableTop - 1.45, center.Z) * CFrame.Angles(0, 0, math.rad(90))
+	end
+	for i = 1, count do
+		local angle = (i - 1) * math.pi * 2 / count - math.pi / 2
+		local seatR = tableRadius + 2.2
+		local x, z = center.X + math.cos(angle) * seatR, center.Z + math.sin(angle) * seatR
+		local seatCF = CFrame.lookAt(Vector3.new(x, floorY + 1.25, z), Vector3.new(center.X, floorY + 1.25, center.Z))
+		local chair = Instance.new("Model")
+		chair.Name = "Chair" .. i
+		chair.Parent = roomModel
+		if chairTemplate then
+			local visual = chairTemplate:Clone()
+			visual.Name = "ChairVisual"
+			visual.Parent = chair
+			local boxCF, pivotCF
+			if visual:IsA("Model") then boxCF = select(1, visual:GetBoundingBox()); pivotCF = visual:GetPivot()
+			else boxCF = visual.CFrame; pivotCF = visual.CFrame end
+			local offset = pivotCF:ToObjectSpace(boxCF)
+			if visual:IsA("Model") then visual:PivotTo(seatCF * CFrame.new(0, -0.15, 0) * offset:Inverse())
+			else visual.CFrame = seatCF * CFrame.new(0, -0.15, 0) end
+			if visual:IsA("BasePart") then visual.Anchored = true; visual.CanQuery = false end
+			for _, obj in ipairs(visual:GetDescendants()) do if obj:IsA("BasePart") then obj.Anchored = true; obj.CanQuery = false end end
+		else
+			roomPart(chair, "ChairBack", Vector3.new(2.2, 2, 0.35), seatCF * CFrame.new(0, 1.05, 1.0), Color3.fromRGB(35, 27, 24), Enum.Material.Wood)
+			for _, side in ipairs({-1, 1}) do
+				roomPart(chair, "ChairLeg_" .. side, Vector3.new(0.18, 1.1, 0.18), seatCF * CFrame.new(side * 0.8, -0.55, -0.75), Color3.fromRGB(25, 21, 20), Enum.Material.Wood)
+			end
+			roomPart(chair, "ChairVisualSeat", Vector3.new(2.2, 0.45, 2.2), seatCF, Color3.fromRGB(42, 31, 27), Enum.Material.Wood)
+		end
+		local seat = mk("Seat", {Name = "Seat", Size = Vector3.new(2.0, 0.35, 2.0), CFrame = seatCF,
+			Anchored = true, CanCollide = true, CanTouch = true, CanQuery = false, Transparency = 1,
+			Material = Enum.Material.Wood, Color = Color3.fromRGB(42, 31, 27)}, chair)
+		local labelGui = mk("BillboardGui", {Name = "ChairLabel", Size = UDim2.fromOffset(110, 28), StudsOffset = Vector3.new(0, 2.2, 0), AlwaysOnTop = true, MaxDistance = 35, Adornee = seat}, seat)
+		local label = mk("TextLabel", {Name = "Label", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 0.15,
+			BackgroundColor3 = Color3.fromRGB(12, 10, 10), Text = "CHAIR " .. i, TextColor3 = Color3.fromRGB(235, 220, 195),
+			TextStrokeTransparency = 0.65, Font = Enum.Font.GothamBold, TextScaled = true}, labelGui)
+		mk("UICorner", {CornerRadius = UDim.new(0, 5)}, label)
+		if table.find(members, me) == i then roomSeat = seat end
+	end
+	if not importedRoom then
+		local lamp = roomPart(roomModel, "CeilingLamp", Vector3.new(2.5, 0.15, 2.5), CFrame.new(center.X, floorY + wallH - 0.6, center.Z), Color3.fromRGB(120, 95, 70), Enum.Material.Neon)
+		mk("PointLight", {Name = "RRTableLight", Color = Color3.fromRGB(255, 190, 130), Brightness = 0.8, Range = radius * 1.6, Shadows = true}, lamp)
+	end
+	Lighting.Ambient = Color3.fromRGB(20, 18, 22)
+	Lighting.OutdoorAmbient = Color3.fromRGB(8, 8, 12)
+	Lighting.Brightness = 0.7
+	local idx = table.find(members, me)
+	if idx then
+		local angle = (idx - 1) * math.pi * 2 / count - math.pi / 2
+		local seatR = tableRadius + 2.2
+		local x, z = center.X + math.cos(angle) * seatR, center.Z + math.sin(angle) * seatR
+		local target = CFrame.lookAt(Vector3.new(x, floorY + 2.1, z), Vector3.new(center.X, floorY + 2.1, center.Z))
+		root.CFrame = target
+		local hum = ch:FindFirstChildOfClass("Humanoid")
+		if hum and roomSeat then task.defer(function() if alive and hum.Parent and roomSeat and roomSeat.Parent then roomSeat:Sit(hum); startSeatLock() end end) end
+	end
+end
+
+local function rollShells()
+	shells = {true, false, false, false, false, false}
+	shuffle(shells)
+	return 1, 5
+end
+local function counts()
+	local l, b = 0, 0
+	for _, s in ipairs(shells) do if s then l += 1 else b += 1 end end
+	return l, b
+end
+
+local net = {sent = 0, recv = 0, err = ""}
+local outbox, seq = {}, os.time()
+local relay = {ws = nil, ok = false}
+local function transmit(text)
+	if CONFIG.relay.enabled then
+		if not (relay.ok and relay.ws) then net.err = "relay offline" return end
+		local ok, err = pcall(function() relay.ws:Send(HttpService:JSONEncode({u = me, t = text})) end)
+		if ok then net.sent += 1 else net.err = tostring(err):sub(1, 60) end
+		return
+	end
+	local ok, err = pcall(function()
+		local done = false
+		if TCS.ChatVersion == Enum.ChatVersion.TextChatService then
+			local chans = TCS:FindFirstChild("TextChannels")
+			local ch = chans and (chans:FindFirstChild("RBXGeneral") or chans:FindFirstChildOfClass("TextChannel"))
+			if ch then ch:SendAsync(text) done = true end
+		end
+		if not done then
+			local ev = RS:FindFirstChild("DefaultChatSystemChatEvents")
+			local say = ev and ev:FindFirstChild("SayMessageRequest")
+			if say then say:FireServer(text, "All") done = true end
+		end
+		if not done then error("no chat channel found") end
+	end)
+	if ok then net.sent += 1 else net.err = tostring(err):sub(1, 60) end
+end
+local function send(text)
+	seq += 1
+	table.insert(outbox, PREFIX .. enc(seq) .. ";" .. text)
+	if #outbox > 300 then table.remove(outbox, 1) end
+end
+task.spawn(function()
+	while alive do
+		if USE_NTFY then task.wait(0.5) continue end
+		local m = table.remove(outbox, 1)
+		if m then
+			task.spawn(transmit, m)
+			task.wait(CONFIG.relay.enabled and 0.08 or 0.7)
+		else
+			task.wait(0.1)
+		end
+	end
+end)
+local ALWAYS = {LOBBY = true, LST = true, CLOSE = true}
+local function humansInGame()
+	local list = (G and G.order) or (lobby and lobby.members) or {}
+	for _, id in ipairs(list) do if id ~= me and not isBot(id) then return true end end
+	return false
+end
+local function bcast(cmd, ...)
+	local args = {...}
+	for i, v in ipairs(args) do args[i] = tostring(v) end
+	if ALWAYS[cmd] or humansInGame() then send(cmd .. ":" .. table.concat(args, ":")) end
+	local ok, err = pcall(apply, cmd, args)
+	if not ok then net.err = tostring(err):sub(1, 60) warn("[RR] " .. cmd .. ": " .. tostring(err)) end
+end
+
+local function hostHandle(sender, cmd, p)
+	if cmd == "JOIN" then
+		if lobby and lobby.host == me and not G and #lobby.members < MAX_PLAYERS and not table.find(lobby.members, sender) then
+			table.insert(lobby.members, sender)
+			bcast("LST", enc(me), idsStr(lobby.members))
+		end
+	elseif cmd == "LEAVE" then
+		if G then hostPlayerLeft(sender)
+		elseif lobby and lobby.host == me then
+			local i = table.find(lobby.members, sender)
+			if i then table.remove(lobby.members, i) bcast("LST", enc(me), idsStr(lobby.members)) end
+		end
+	elseif cmd == "ACT" then
+		hostAct(sender, p[2], p[3], p[4])
+	end
+end
+
+local seen = {}
+local function onMessage(sender, text)
+	if sender == me or type(text) ~= "string" or text:sub(1, #PREFIX) ~= PREFIX then return end
+	local sq, body = text:sub(#PREFIX + 1):match("^(%w+);(.*)$")
+	if not sq then return end
+	local key = sender .. ":" .. sq
+	if seen[key] then return end
+	seen[key] = true
+	net.recv += 1
+	local parts = split(body, ":")
+	local cmd = table.remove(parts, 1)
+	local h = parts[1] and dec(parts[1])
+	if not h then return end
+	local ok, err = pcall(function()
+		if cmd == "JOIN" or cmd == "LEAVE" or cmd == "ACT" then
+			if h == me then hostHandle(sender, cmd, parts) end
+		elseif h == sender then
+			apply(cmd, parts)
+		end
+	end)
+	if not ok then net.err = tostring(err):sub(1, 60) warn("[RR] " .. tostring(err)) end
+end
+
+if USE_NTFY then
+	task.spawn(function()
+		local req = (syn and syn.request) or (http and http.request) or http_request or request
+		local WS = (WebSocket and WebSocket.connect) or (syn and syn.websocket and syn.websocket.connect)
+		if not req then net.err = "no request()" warn("[RR] ntfy mode needs an executor with request()") return end
+		if not WS then net.err = "no WebSocket" warn("[RR] ntfy mode needs WebSocket support to receive messages") return end
+		local NT = CONFIG.ntfy
+		local base = (NT.server:gsub("/+$", ""))
+		local wsBase = (base:gsub("^http", "ws"))
+		local topic = NT.topic
+		if topic == "" then
+			local id = (game.JobId:gsub("-", ""))
+			if id == "" then id = tostring(game.PlaceId) end
+			topic = "rr" .. id
+		end
+
+		task.spawn(function()
+			local failStreak = 0
+			while alive do
+				if #outbox == 0 then
+					task.wait(0.15)
+				else
+					task.wait(NT.batchDelay)
+					local batch, raw, size = {}, {}, 0
+					while #outbox > 0 do
+						local line = enc(me) .. "|" .. outbox[1]
+						if #batch > 0 and size + #line + 1 > 3500 then break end
+						raw[#raw + 1] = table.remove(outbox, 1)
+						batch[#batch + 1] = line
+						size += #line + 1
+					end
+					local ok, res = pcall(req, {Url = base .. "/" .. topic, Method = "POST",
+						Headers = {["Content-Type"] = "text/plain"}, Body = table.concat(batch, "\n")})
+					local code = ok and res and (res.StatusCode or 200) or 0
+					if code >= 200 and code < 300 then
+						net.sent += #batch
+						net.err = ""
+						failStreak = 0
+					else
+						failStreak += 1
+						net.err = "ntfy send failed (" .. tostring(code) .. ")"
+						if failStreak <= 5 then
+							for i = #raw, 1, -1 do table.insert(outbox, 1, raw[i]) end
+						end
+						task.wait(code == 429 and 10 or 2)
+					end
+				end
+			end
+		end)
+
+		local function handle(msg)
+			local ok, d = pcall(HttpService.JSONDecode, HttpService, msg)
+			if not ok or type(d) ~= "table" or d.event ~= "message" or type(d.message) ~= "string" then return end
+			for line in d.message:gmatch("[^\n]+") do
+				local u, t = line:match("^(%w+)|(.*)$")
+				local sid = u and dec(u)
+				if sid and t then onMessage(sid, t) end
+			end
+		end
+		while alive do
+			local ok, ws = pcall(WS, wsBase .. "/" .. topic .. "/ws")
+			if ok and ws then
+				relay.ws = ws
+				local closed = false
+				ws.OnMessage:Connect(handle)
+				ws.OnClose:Connect(function() closed = true end)
+				net.err = ""
+				send("HELLO:" .. enc(me))
+				while alive and not closed do task.wait(1) end
+				pcall(function() ws:Close() end)
+			else
+				net.err = "ntfy connect failed"
+			end
+			if alive then task.wait(5) end
+		end
+	end)
+end
+
+if CONFIG.relay.enabled then
+	task.spawn(function()
+		local WS = (WebSocket and WebSocket.connect) or (syn and syn.websocket and syn.websocket.connect)
+		if not WS then net.err = "no WebSocket support" warn("[RR] your executor has no WebSocket - relay mode unavailable") return end
+		if CONFIG.relay.url == "" then net.err = "relay url empty" warn("[RR] set CONFIG.relay.url") return end
+		local room = CONFIG.relay.room ~= "" and CONFIG.relay.room or (game.JobId ~= "" and game.JobId or tostring(game.PlaceId))
+		while alive do
+			local ok, ws = pcall(WS, CONFIG.relay.url .. "?room=" .. HttpService:UrlEncode(room))
+			if ok and ws then
+				relay.ws, relay.ok = ws, true
+				net.err = ""
+				local closed = false
+				ws.OnMessage:Connect(function(msg)
+					local ok2, d = pcall(HttpService.JSONDecode, HttpService, msg)
+					if ok2 and type(d) == "table" and d.u and type(d.t) == "string" then onMessage(tonumber(d.u) or 0, d.t) end
+				end)
+				ws.OnClose:Connect(function() closed = true end)
+				while alive and not closed do task.wait(1) end
+				relay.ok = false
+				pcall(function() ws:Close() end)
+			else
+				net.err = "relay connect failed"
+			end
+			if alive then task.wait(3) end
+		end
+	end)
+end
+
+if not NOCHAT and TCS.ChatVersion == Enum.ChatVersion.TextChatService then
+	pcall(function()
+		connect(TCS.MessageReceived, function(m) local src = m.TextSource if src then onMessage(src.UserId, m.Text) end end)
+	end)
+	if CONFIG.hideSyncMessages then
+		pcall(function()
+			TCS.OnIncomingMessage = function(m)
+				if m.Text:sub(1, #PREFIX) == PREFIX then
+					local props = Instance.new("TextChatMessageProperties")
+					props.Text = ""
+					pcall(function() props.PrefixText = "" end)
+					return props
+				end
+			end
+		end)
+		pcall(function()
+			TCS.OnBubbleAdded = function(m)
+				if m.Text:sub(1, #PREFIX) == PREFIX then
+					local props = Instance.new("BubbleChatMessageProperties")
+					pcall(function()
+						props.BackgroundTransparency = 1
+						props.TextSize = 1
+						props.PaddingTop, props.PaddingBottom, props.PaddingLeft, props.PaddingRight = UDim.new(0, 0), UDim.new(0, 0), UDim.new(0, 0), UDim.new(0, 0)
+					end)
+					return props
+				end
+			end
+		end)
+	end
+end
+local function hookChat(plr) connect(plr.Chatted, function(msg) onMessage(plr.UserId, msg) end) end
+if not NOCHAT then
+	for _, plr in ipairs(Players:GetPlayers()) do hookChat(plr) end
+	connect(Players.PlayerAdded, hookChat)
+end
+
+local gui = mk("ScreenGui", {Name = "RRGui", ResetOnSpawn = false, DisplayOrder = 999, IgnoreGuiInset = true}, nil)
+pcall(function() gui.Parent = (gethui and gethui()) or game:GetService("CoreGui") end)
+if not gui.Parent then gui.Parent = lp:WaitForChild("PlayerGui") end
+
+local ragdolls = {}
+local function unragdoll(ch)
+	local info = ragdolls[ch]
+	if not info then return end
+	ragdolls[ch] = nil
+	for _, o in ipairs(info.extra) do pcall(function() o:Destroy() end) end
+	for _, m in ipairs(info.motors) do pcall(function() m.Enabled = true end) end
+	local hum, root = ch:FindFirstChildOfClass("Humanoid"), ch:FindFirstChild("HumanoidRootPart")
+	if root and ch == lp.Character and hum and hum.Health > 0 then
+		local _, y = root.CFrame:ToOrientation()
+		root.CFrame = CFrame.new(root.Position + Vector3.new(0, 3, 0)) * CFrame.Angles(0, y, 0)
+	end
+	if hum and hum.Health > 0 then hum.PlatformStand = false hum:ChangeState(Enum.HumanoidStateType.GettingUp) end
+end
+local function ragdoll(ch, perm, dir)
+	if not ch or ragdolls[ch] then return end
+	local hum, root = ch:FindFirstChildOfClass("Humanoid"), ch:FindFirstChild("HumanoidRootPart")
+	if not hum or not root then return end
+	local info = {motors = {}, extra = {}, perm = perm}
+	ragdolls[ch] = info
+	hum.PlatformStand = true
+	pcall(function() hum:ChangeState(Enum.HumanoidStateType.Physics) end)
+	for _, m in ipairs(ch:GetDescendants()) do
+		if m:IsA("Motor6D") and m.Part0 and m.Part1 and m.Part0 ~= root then
+			local a0 = mk("Attachment", {CFrame = m.C0}, m.Part0)
+			local a1 = mk("Attachment", {CFrame = m.C1}, m.Part1)
+			local b = mk("BallSocketConstraint", {Attachment0 = a0, Attachment1 = a1, LimitsEnabled = true,
+				TwistLimitsEnabled = true, UpperAngle = 50, TwistLowerAngle = -40, TwistUpperAngle = 40}, m.Part0)
+			m.Enabled = false
+			m.Part1.CanCollide = true
+			table.insert(info.motors, m)
+			table.insert(info.extra, a0) table.insert(info.extra, a1) table.insert(info.extra, b)
+		end
+	end
+	local R = CONFIG.ragdoll
+	root.AssemblyLinearVelocity = (dir or Vector3.zero) * R.force + Vector3.new(0, R.upForce, 0)
+	root.AssemblyAngularVelocity = Vector3.new(math.random(-R.spin, R.spin), 0, math.random(-R.spin, R.spin))
+	if not perm then
+		task.delay(R.getUpTime, function() if ragdolls[ch] == info and not info.perm then unragdoll(ch) end end)
+	end
+end
+local function killMe()
+	local ch = lp.Character
+	local hum = ch and ch:FindFirstChildOfClass("Humanoid")
+	if hum and hum.Health > 0 then
+		pcall(function() hum.Health = 0 end)
+		pcall(function() hum:ChangeState(Enum.HumanoidStateType.Dead) end)
+	end
+end
+
+local bases = setmetatable({}, {__mode = "k"})
+local function baseOf(j) if not bases[j] then bases[j] = j.C0 end return bases[j] end
+
+local function pickAxis(joint)
+	local bestAx, bestSg, bestScore = Vector3.xAxis, 1, -math.huge
+	for _, ax in ipairs({Vector3.xAxis, Vector3.zAxis}) do
+		for _, sg in ipairs({1, -1}) do
+			local cf = baseOf(joint) * CFrame.fromAxisAngle(ax, sg * math.rad(60)) * joint.C1:Inverse()
+			local v = cf:VectorToWorldSpace(Vector3.new(0, -1, 0))
+			local score = -v.Z - math.abs(v.X) * 0.6
+			if score > bestScore then bestScore, bestAx, bestSg = score, ax, sg end
+		end
+	end
+	return bestAx, bestSg
+end
+
+local function tweenC0(obj, dur, goal, style, dir)
+	if not obj or not obj.Parent then return end
+	if dur <= 0 then obj.C0 = goal return end
+	local tw = TS:Create(obj, TweenInfo.new(dur, style or Enum.EasingStyle.Sine, dir or Enum.EasingDirection.Out), {C0 = goal})
+	tw:Play()
+	return tw
+end
+
+local function newArm(ch, side)
+	if not ch then return end
+	local r15 = ch:FindFirstChild(side .. "Hand") ~= nil
+	local hand = ch:FindFirstChild(side .. "Hand") or ch:FindFirstChild(side .. " Arm")
+	local shoulder, elbow
+	if r15 then
+		local ua = ch:FindFirstChild(side .. "UpperArm")
+		shoulder = ua and ua:FindFirstChild(side .. "Shoulder")
+		local la = ch:FindFirstChild(side .. "LowerArm")
+		elbow = la and la:FindFirstChild(side .. "Elbow")
+	else
+		local t = ch:FindFirstChild("Torso")
+		shoulder = t and t:FindFirstChild(side .. " Shoulder")
+	end
+	if not hand or not shoulder then return end
+	local arm = {side = side, r15 = r15, hand = hand, shoulder = shoulder, elbow = elbow, deg = 0, elb = 0, overrideActive = false}
+	arm.sBase = baseOf(shoulder)
+	arm.sAx, arm.sSg = pickAxis(shoulder)
+	if elbow then arm.eBase = baseOf(elbow) arm.eAx, arm.eSg = pickAxis(elbow) end
+	arm.grip = CFrame.new(0, r15 and -0.1 or -0.95, 0) * CFrame.Angles(-math.pi / 2, 0, 0)
+	return arm
+end
+
+local function armPose(arm, deg, elb, t, style)
+	if not arm or not arm.shoulder or not arm.shoulder.Parent then return end
+
+	arm.overrideActive = not arm.r15
+	arm.deg, arm.elb = deg, elb or 0
+	local sDeg = deg
+	if not arm.elbow then sDeg = math.min(deg + (elb or 0) * 0.45, 165) end
+	tweenC0(arm.shoulder, t or 0.4, arm.sBase * CFrame.fromAxisAngle(arm.sAx, arm.sSg * math.rad(sDeg)), style or Enum.EasingStyle.Quint)
+	if arm.elbow and arm.elbow.Parent then
+		tweenC0(arm.elbow, t or 0.4, arm.eBase * CFrame.fromAxisAngle(arm.eAx, arm.eSg * math.rad(elb or 0)), style or Enum.EasingStyle.Quint)
+	end
+end
+
+local function armRestore(arm, t)
+	if not arm then return end
+	local duration = t or 0.3
+	if not arm.r15 then arm.overrideActive = true end
+	local shoulderTween
+	if arm.shoulder and arm.shoulder.Parent then shoulderTween = tweenC0(arm.shoulder, duration, arm.sBase) end
+	if arm.elbow and arm.elbow.Parent then tweenC0(arm.elbow, duration, arm.eBase) end
+	if not arm.r15 then
+		if shoulderTween then
+			shoulderTween.Completed:Once(function()
+				if arm then arm.overrideActive = false end
+			end)
+		else
+			arm.overrideActive = false
+		end
+	end
+end
+
+local armOverrideConnection = RunService.PreSimulation:Connect(function()
+	if not alive then return end
+	local function neutralize(arm)
+		if arm and not arm.r15 and arm.overrideActive and arm.shoulder and arm.shoulder.Parent then
+			arm.shoulder.Transform = CFrame.identity
+		end
+	end
+	neutralize(gun.arm)
+	neutralize(gun.itemArm)
+end)
+
+local gun = {}
+local holsterGunModel = nil
+local GUN_GRIP_INV = CFrame.new(0, 0.33, -0.22)
+
+local GUN_POSES = {
+	idle  = {tilt = -5, yaw = -2, deg = 32, elb = 22},
+	ready = {tilt = -2, yaw = 0, deg = 58, elb = 34},
+	aim   = {tilt = 1, yaw = 0, deg = 82, elb = 8},
+	self  = {tilt = -5, yaw = CONFIG.gun.selfYaw, deg = 94, elb = 104},
+}
+local function gunHold(arm, tilt, yaw)
+	return arm.grip * CFrame.Angles(math.rad(tilt), math.rad(yaw), 0) * GUN_GRIP_INV
+end
+
+local function clearGun()
+	if gun.model then gun.model:Destroy() end
+	if gun.itemModel then gun.itemModel:Destroy() end
+	if gun.itemArm then armRestore(gun.itemArm, 0.2) end
+	if gun.arm then armRestore(gun.arm, 0.3) end
+	if holsterGunModel then holsterGunModel:Destroy() holsterGunModel = nil end
+	gun = {}
+end
+
+local function poseGun(mode, t, style)
+	if not gun.weld or not gun.arm then return end
+	local P = GUN_POSES[mode]
+	gun.mode = mode
+	armPose(gun.arm, P.deg, P.elb, t, style or Enum.EasingStyle.Quint)
+	gun.cur = gunHold(gun.arm, P.tilt, P.yaw)
+	tweenC0(gun.weld, t or 0.4, gun.cur, style or Enum.EasingStyle.Quint)
+end
+
+local COLT_B64 = [==[PASTE_ORIGINAL_BLOB_HERE]==]
+local coltTemplate = nil
+local coltInfo = nil
+
+local function b64dec(s)
+	local f = (crypt and crypt.base64decode) or (crypt and crypt.base64 and crypt.base64.decode) or base64decode or base64_decode or (base64 and base64.decode)
+	if f then
+		local ok, r = pcall(f, s)
+		if ok and type(r) == "string" and #r > 100 and r:sub(1, 8) == "<roblox!" then return r end
+	end
+	local A = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+	local map = {}
+	for i = 1, 64 do map[A:byte(i)] = i - 1 end
+	local out, buf, bits = {}, 0, 0
+	for i = 1, #s do
+		local v = map[s:byte(i)]
+		if v then
+			buf = buf * 64 + v
+			bits += 6
+			if bits >= 8 then
+				bits -= 8
+				local p2 = 2 ^ bits
+				out[#out + 1] = string.char(math.floor(buf / p2))
+				buf = buf % p2
+			end
+		end
+	end
+	return table.concat(out)
+end
+
+local function aabbOf(items)
+	local mn, mx = Vector3.one * math.huge, Vector3.one * -math.huge
+	for _, it in ipairs(items) do
+		local cf, s = it.cf, it.size
+		local x, y, z = cf.XVector, cf.YVector, cf.ZVector
+		local h = Vector3.new(
+			(math.abs(x.X) * s.X + math.abs(y.X) * s.Y + math.abs(z.X) * s.Z) / 2,
+			(math.abs(x.Y) * s.X + math.abs(y.Y) * s.Y + math.abs(z.Y) * s.Z) / 2,
+			(math.abs(x.Z) * s.X + math.abs(y.Z) * s.Y + math.abs(z.Z) * s.Z) / 2)
+		mn = mn:Min(cf.Position - h)
+		mx = mx:Max(cf.Position + h)
+	end
+	return mn, mx
+end
+
+local function coltParts(tpl)
+	local byName = {}
+	for _, p in ipairs(tpl:GetDescendants()) do
+		if p:IsA("BasePart") then byName[p.Name] = p end
+	end
+	local frame, cyl, ham, trg = byName["Cube.001"], byName["Cube.006"], byName["Cube.008"], byName["Cube.007"]
+	if not (frame and cyl and ham and trg) then error("Colt.rbxm is missing parts") end
+	return byName, frame, cyl, ham, trg
+end
+
+local function analyseColt(tpl)
+	local GC = CONFIG.gun
+	local byName, frame, cylSrc, hamSrc, trgSrc = coltParts(tpl)
+	local inv = frame.CFrame:Inverse()
+	local raw = {}
+	for _, p in pairs(byName) do raw[#raw + 1] = {cf = inv * p.CFrame, size = p.Size, part = p} end
+	local function rawPos(p) return (inv * p.CFrame).Position end
+
+	local mn, mx = aabbOf(raw)
+	local ext = mx - mn
+	local axes = {Vector3.xAxis, Vector3.yAxis, Vector3.zAxis}
+	local comps = {ext.X, ext.Y, ext.Z}
+	local fi = 1
+	for i = 2, 3 do if comps[i] > comps[fi] then fi = i end end
+
+	local fwd = axes[fi] * ((rawPos(cylSrc) - rawPos(hamSrc)):Dot(axes[fi]) >= 0 and 1 or -1)
+	local d = rawPos(hamSrc) - rawPos(trgSrc)
+	local ui, best = nil, -1
+	for i = 1, 3 do
+		if i ~= fi then
+			local a = math.abs(d:Dot(axes[i]))
+			if a > best then ui, best = i, a end
+		end
+	end
+	local up = axes[ui] * (d:Dot(axes[ui]) >= 0 and 1 or -1)
+	local right = up:Cross(-fwd)
+	local R = CFrame.fromMatrix(Vector3.zero, right, up, -fwd):Inverse()
+
+	local conv = {}
+	for _, it in ipairs(raw) do conv[#conv + 1] = {cf = R * it.cf, size = it.size} end
+	local cmn, cmx = aabbOf(conv)
+	local cen = (cmn + cmx) / 2
+	local len = math.max(cmx.Z - cmn.Z, 0.001)
+	local S = (GC.length and GC.length > 0) and (GC.length / len) or GC.scale
+
+	local f = GC.gripFrac
+	local gpU = Vector3.new(cmn.X + f.X * (cmx.X - cmn.X), cmn.Y + f.Y * (cmx.Y - cmn.Y), cmn.Z + f.Z * len) - cen
+	local cylc = (R * (inv * cylSrc.CFrame)).Position - cen
+	return {
+		R = R, cen = cen, S = S, lenS = len * S,
+		gp = gpU * S + GC.gripNudge,
+		muzzle = Vector3.new(cylc.X, cylc.Y, cmn.Z - cen.Z) * S,
+	}
+end
+
+local function loadColt()
+	if coltTemplate ~= nil then return coltTemplate end
+	coltTemplate = false
+	if not CONFIG.gun.useColt then return false end
+	local getCustom = getcustomasset or getsynasset
+	if not (writefile and isfile and getCustom) then
+		warn("[RR] executor has no writefile/isfile/getcustomasset - using the built-in revolver")
+		return false
+	end
+	local ok, res = pcall(function()
+		local folder = CONFIG.gun.folder
+		pcall(function() if makefolder and isfolder and not isfolder(folder) then makefolder(folder) end end)
+		local path = folder .. "/" .. CONFIG.gun.file
+		if not isfile(path) then
+			if #COLT_B64 < 1000 then error("no " .. path .. " in your workspace and no embedded model data") end
+			writefile(path, b64dec(COLT_B64))
+		end
+		local objs = game:GetObjects(getCustom(path))
+		local m = objs and objs[1]
+		if not m then error("GetObjects returned nothing") end
+		coltInfo = analyseColt(m)
+		return m
+	end)
+	if ok and res and coltInfo then
+		coltTemplate = res
+		GUN_GRIP_INV = CFrame.new(-coltInfo.gp)
+	else
+		warn("[RR] could not load Colt.rbxm (" .. tostring(res) .. ") - using the built-in revolver")
+	end
+	return coltTemplate
+end
+
+local function makeColtModel(parent, name)
+	local tpl = loadColt()
+	if not tpl or not coltInfo then return end
+	local okp, byName, frame, cylSrc, hamSrc, trgSrc = pcall(coltParts, tpl)
+	if not okp then warn("[RR] Colt.rbxm is missing parts") return end
+	local I = coltInfo
+	local S, R, cen, lenS = I.S, I.R, I.cen, I.lenS
+
+	local model = mk("Model", {Name = name or "RRRevolver"}, parent)
+	local inv = frame.CFrame:Inverse()
+	local function convCF(p)
+		local X = R * (inv * p.CFrame)
+		local v = X.Position
+		return CFrame.new((v - cen) * S) * (X - v)
+	end
+
+	local root = mk("Part", {Name = "Frame", Size = Vector3.new(.1, .1, .1), Transparency = 1, CanCollide = false, CanTouch = false,
+		CanQuery = false, Massless = true, CastShadow = false, CFrame = CFrame.new()}, model)
+
+	local welds = {}
+	for pname, src in pairs(byName) do
+		local p = src:Clone()
+		for _, c in ipairs(p:GetChildren()) do c:Destroy() end
+		p.Size = src.Size * S
+		p.Anchored, p.CanCollide, p.CanTouch, p.CanQuery = false, false, false, false
+		p.Massless, p.CastShadow = true, false
+		local c0 = convCF(src)
+		p.CFrame = c0
+		p.Parent = model
+		welds[src] = mk("Weld", {Name = "W_" .. pname, Part0 = root, Part1 = p, C0 = c0}, p)
+		if src == frame then p.Name = "Body"
+		elseif src == cylSrc then p.Name = "Cylinder"
+		elseif src == hamSrc then p.Name = "Hammer"
+		elseif src == trgSrc then p.Name = "Trigger" end
+	end
+	local cylWeld, hammerWeld, triggerWeld = welds[cylSrc], welds[hamSrc], welds[trgSrc]
+	local cyl = cylWeld.Part1
+
+	local function invisible(n, size, cf, shape, color, mat)
+		local p = mk("Part", {Name = n, Size = size, Color = color or Color3.new(1, 1, 1), Material = mat or Enum.Material.SmoothPlastic, Transparency = 1,
+			CanCollide = false, CanTouch = false, CanQuery = false, Massless = true, CastShadow = false, CFrame = cf}, model)
+		if shape then p.Shape = shape end
+		mk("Weld", {Part0 = root, Part1 = p, C0 = cf}, p)
+		return p
+	end
+	local muzzle = invisible("Muzzle", Vector3.new(.08, .08, .04), CFrame.new(I.muzzle))
+	local flashPart = invisible("FlashBall", Vector3.new(.2, .2, .45), CFrame.new(I.muzzle + Vector3.new(0, 0, -lenS * 0.18)),
+		Enum.PartType.Ball, Color3.fromRGB(255, 210, 110), Enum.Material.Neon)
+	mk("ParticleEmitter", {Name = "Smoke", Enabled = false, EmissionDirection = Enum.NormalId.Front, Lifetime = NumberRange.new(.5, 1.1),
+		Speed = NumberRange.new(1, 3), Size = NumberSequence.new(.15, .8),
+		Transparency = NumberSequence.new(.35, 1), Color = ColorSequence.new(Color3.fromRGB(190, 190, 190)),
+		SpreadAngle = Vector2.new(14, 14), Acceleration = Vector3.new(0, 1.5, 0)}, muzzle)
+	mk("ParticleEmitter", {Name = "Sparks", Enabled = false, EmissionDirection = Enum.NormalId.Front, Lifetime = NumberRange.new(.15, .35),
+		Speed = NumberRange.new(12, 24), Size = NumberSequence.new(.12, 0),
+		Color = ColorSequence.new(Color3.fromRGB(255, 200, 90)), LightEmission = 1,
+		SpreadAngle = Vector2.new(25, 25)}, muzzle)
+	mk("PointLight", {Name = "Flash", Enabled = false, Brightness = 6, Range = 10, Color = Color3.fromRGB(255, 190, 100)}, muzzle)
+	model.PrimaryPart = root
+
+	local function cylSpin(base, a)
+		local p = base.Position
+		return CFrame.new(p) * CFrame.Angles(0, 0, a) * (base - p)
+	end
+	local function hammerCock(base)
+		local pv = base.Position + Vector3.new(0, -0.07 * lenS, 0.06 * lenS)
+		return CFrame.new(pv) * CFrame.Angles(math.rad(35), 0, 0) * CFrame.new(-pv) * base
+	end
+	return model, root, muzzle, cyl, cylWeld, flashPart, hammerWeld, triggerWeld, cylSpin, hammerCock
+end
+
+local function makeGunModel(parent, name)
+	local m1, m2, m3, m4, m5, m6, m7, m8, m9, m10 = makeColtModel(parent, name)
+	if m1 then return m1, m2, m3, m4, m5, m6, m7, m8, m9, m10 end
+	GUN_GRIP_INV = CFrame.new(0, 0.33, -0.22)
+
+	local model = mk("Model", {Name = name or "RRRevolver"}, parent)
+	local function part(n, size, color, material, cf, shape, trans)
+		local p = mk("Part", {
+			Name = n, Size = size, Color = color, Material = material or Enum.Material.Metal, Transparency = trans or 0,
+			CanCollide = false, CanTouch = false, CanQuery = false, Massless = true, CastShadow = false,
+			CFrame = cf, TopSurface = Enum.SurfaceType.Smooth, BottomSurface = Enum.SurfaceType.Smooth
+		}, model)
+		if shape then p.Shape = shape end
+		return p
+	end
+	local root = part("Frame", Vector3.new(.25, .34, .52), CONFIG.gun.frame, Enum.Material.Metal, CFrame.new())
+	local function attach(p, to)
+		return mk("Weld", {Part0 = to, Part1 = p, C0 = to.CFrame:Inverse() * p.CFrame}, p)
+	end
+	local function detail(n, size, color, cf, mat, shape, trans, to)
+		local p = part(n, size, color, mat, cf, shape, trans)
+		local w = attach(p, to or root)
+		return p, w
+	end
+	local CYL = Enum.PartType.Cylinder
+	detail("Barrel", Vector3.new(.16, .16, .76), CONFIG.gun.barrel, CFrame.new(0, .06, -.61))
+	detail("MuzzleRim", Vector3.new(.19, .19, .07), Color3.fromRGB(30, 30, 33), CFrame.new(0, .06, -1.0))
+	detail("FrontSight", Vector3.new(.055, .08, .09), Color3.fromRGB(170, 170, 175), CFrame.new(0, .17, -.83))
+	local cylCF = CFrame.new(0, .035, -.13) * CFrame.Angles(0, math.rad(90), 0)
+	local cyl, cylWeld = detail("Cylinder", Vector3.new(.31, .38, .38), CONFIG.gun.cylinder, cylCF, Enum.Material.Metal, CYL)
+	for i = 1, 6 do
+		local ang = (i - 1) * math.pi / 3
+		local cf = CFrame.new(math.cos(ang) * .12, .035 + math.sin(ang) * .12, .022) * CFrame.Angles(0, math.rad(90), 0)
+		detail("Chamber" .. i, Vector3.new(.02, .07, .07), Color3.fromRGB(18, 18, 20), cf, Enum.Material.Metal, CYL, 0, cyl)
+	end
+	detail("Grip", Vector3.new(.21, .48, .25), CONFIG.gun.grip, CFrame.new(0, -.36, .23) * CFrame.Angles(math.rad(-15), 0, 0), Enum.Material.Wood)
+	detail("GripCap", Vector3.new(.23, .06, .27), Color3.fromRGB(48, 32, 23), CFrame.new(0, -.61, .24))
+	detail("TriggerGuard", Vector3.new(.20, .035, .23), Color3.fromRGB(85, 85, 90), CFrame.new(0, -.20, .02))
+	local trigger, triggerWeld = detail("Trigger", Vector3.new(.045, .12, .045), Color3.fromRGB(25, 25, 27), CFrame.new(0, -.23, -.015))
+	local hammer, hammerWeld = detail("Hammer", Vector3.new(.10, .14, .09), Color3.fromRGB(125, 125, 130), CFrame.new(0, .19, .20))
+	local muzzle = detail("Muzzle", Vector3.new(.08, .08, .04), Color3.new(1, 1, 1), CFrame.new(0, .06, -1.03), nil, nil, 1)
+	local flashPart = detail("FlashBall", Vector3.new(.22, .22, .5), Color3.fromRGB(255, 210, 110), CFrame.new(0, .06, -1.28), Enum.Material.Neon, Enum.PartType.Ball, 1)
+	mk("ParticleEmitter", {Name = "Smoke", Enabled = false, Lifetime = NumberRange.new(.5, 1.1),
+		Speed = NumberRange.new(1, 3), Size = NumberSequence.new(.15, .8),
+		Transparency = NumberSequence.new(.35, 1), Color = ColorSequence.new(Color3.fromRGB(190, 190, 190)),
+		SpreadAngle = Vector2.new(14, 14), Acceleration = Vector3.new(0, 1.5, 0)}, muzzle)
+	mk("ParticleEmitter", {Name = "Sparks", Enabled = false, Lifetime = NumberRange.new(.15, .35),
+		Speed = NumberRange.new(12, 24), Size = NumberSequence.new(.12, 0),
+		Color = ColorSequence.new(Color3.fromRGB(255, 200, 90)), LightEmission = 1,
+		SpreadAngle = Vector2.new(25, 25)}, muzzle)
+	mk("PointLight", {Name = "Flash", Enabled = false, Brightness = 6, Range = 10, Color = Color3.fromRGB(255, 190, 100)}, muzzle)
+	model.PrimaryPart = root
+	local function cylSpin(base, a) return base * CFrame.Angles(a, 0, 0) end
+	local function hammerCock(base) return base * CFrame.Angles(math.rad(-38), 0, 0) end
+	return model, root, muzzle, cyl, cylWeld, flashPart, hammerWeld, triggerWeld, cylSpin, hammerCock
+end
+
+local function makeHolster()
+	local lc = lp.Character
+	if not lc then return end
+	local r15 = lc:FindFirstChild("LowerTorso") ~= nil
+	local hip = lc:FindFirstChild("LowerTorso") or lc:FindFirstChild("Torso")
+	if not hip then return end
+	local hModel, hRoot = makeGunModel(lc, "RRHolsteredRevolver")
+	local off = r15 and CFrame.new(1.08, 0.0, 0.1) or CFrame.new(1.12, -0.7, 0.05)
+	mk("Weld", {Name = "RRHolsterWeld", Part0 = hip, Part1 = hRoot, C0 = off * CFrame.Angles(math.rad(-100), math.rad(6), math.rad(-4))}, hRoot)
+	holsterGunModel = hModel
+end
+
+local function setHolder(id)
+	clearGun()
+	local ch = charOf(id)
+	if not ch then return end
+	local arm = newArm(ch, "Right")
+	if not arm then return end
+	if id ~= me then pcall(makeHolster) end
+	local model, root, muzzle, cyl, cylWeld, flashPart, hammerWeld, triggerWeld, cylSpin, hammerCock = makeGunModel(ch, "RRRevolver")
+	local hold = gunHold(arm, GUN_POSES.idle.tilt, 0)
+	local weld = mk("Weld", {Name = "RRGripWeld", Part0 = arm.hand, Part1 = root, C0 = hold}, root)
+	gun = {model = model, weld = weld, cur = hold, muzzle = muzzle, cyl = cyl, cylWeld = cylWeld, cylBase = cylWeld.C0, cylAngle = 0,
+		flash = flashPart, hammerWeld = hammerWeld, hammerBase = hammerWeld.C0, triggerWeld = triggerWeld, triggerBase = triggerWeld.C0,
+		cylSpin = cylSpin, hammerCock = hammerCock,
+		arm = arm, id = id, mode = "idle"}
+	poseGun("idle", 0.5)
+end
+
+local function tremble(dur, mag)
+	local g = gun.model
+	if not g then return end
+	task.spawn(function()
+		local t0 = os.clock()
+		while alive and gun.model == g and os.clock() - t0 < dur do
+			local k = (os.clock() - t0) / dur
+			local m = mag * (0.4 + k) * 0.02
+			if gun.weld and gun.weld.Parent then
+				gun.weld.C0 = gun.cur * CFrame.Angles(rand(-m, m), rand(-m, m), rand(-m, m))
+			end
+			task.wait(0.03)
+		end
+		if gun.model == g and gun.weld and gun.weld.Parent then gun.weld.C0 = gun.cur end
+	end)
+end
+
+local function cockHammer()
+	if not gun.model then return end
+	snd("click", 0.8, 1.3)
+	tweenC0(gun.hammerWeld, 0.14, gun.hammerCock(gun.hammerBase), Enum.EasingStyle.Quad)
+	tweenC0(gun.triggerWeld, 0.14, gun.triggerBase * CFrame.new(0, 0, 0.03), Enum.EasingStyle.Quad)
+end
+
+local function fireFx()
+	if not gun.model then return end
+	local sm, sp, fl = gun.muzzle:FindFirstChild("Smoke"), gun.muzzle:FindFirstChild("Sparks"), gun.muzzle:FindFirstChild("Flash")
+	if sm then sm:Emit(14) end
+	if sp then sp:Emit(10) end
+	if fl then fl.Enabled = true task.delay(0.08, function() if fl.Parent then fl.Enabled = false end end) end
+	if gun.flash then
+		gun.flash.Transparency = 0.15
+		TS:Create(gun.flash, TweenInfo.new(0.12), {Transparency = 1}):Play()
+	end
+	tweenC0(gun.hammerWeld, 0.05, gun.hammerBase, Enum.EasingStyle.Quad)
+	tweenC0(gun.triggerWeld, 0.08, gun.triggerBase)
+	gun.cylAngle = (gun.cylAngle or 0) + math.pi / 3
+	tweenC0(gun.cylWeld, 0.12, gun.cylSpin(gun.cylBase, gun.cylAngle), Enum.EasingStyle.Quad)
+	if gun.weld and gun.cur then
+		local base = gun.cur
+		tweenC0(gun.weld, 0.06, base * CFrame.new(0, 0.04, 0.16) * CFrame.Angles(math.rad(16), 0, 0), Enum.EasingStyle.Quad)
+		task.delay(0.08, function()
+			if gun.weld and gun.weld.Parent then tweenC0(gun.weld, 0.35, base, Enum.EasingStyle.Back) end
+		end)
+	end
+	if gun.arm then
+		local a = gun.arm
+		local d, e = a.deg, a.elb
+		armPose(a, d + 11, e + 6, 0.06, Enum.EasingStyle.Quad)
+		task.delay(0.09, function() if gun.arm == a then armPose(a, d, e, 0.35, Enum.EasingStyle.Back) end end)
+	end
+end
+
+local function spinGunFx()
+	if not gun.model or not gun.cylWeld then return end
+	local w, base, spinFn = gun.cylWeld, gun.cylBase, gun.cylSpin
+	local nv = mk("NumberValue", {Value = gun.cylAngle or 0})
+	local c
+	c = nv.Changed:Connect(function(v) if w.Parent then w.C0 = spinFn(base, v) end end)
+	local tw = TS:Create(nv, TweenInfo.new(T.spin, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Value = (gun.cylAngle or 0) + math.pi * 12})
+	tw.Completed:Connect(function() c:Disconnect() nv:Destroy() end)
+	tw:Play()
+	gun.cylAngle = 0
+	local n = 16
+	for i = 1, n do
+		task.delay(T.spin * math.sqrt(i / n) * 0.92, function() snd("click", 0.35, 1.5 + (i / n) * 0.3) end)
+	end
+	if gun.weld and gun.cur then
+		local base0 = gun.cur
+		local g = gun.model
+		tweenC0(gun.weld, 0.25, base0 * CFrame.Angles(math.rad(22), 0, math.rad(-6)), Enum.EasingStyle.Back)
+		task.delay(T.spin * 0.8, function()
+			if gun.model == g and gun.weld and gun.weld.Parent then tweenC0(gun.weld, 0.4, base0, Enum.EasingStyle.Quint) end
+		end)
+	end
+end
+
+local function buildItem(code, parent)
+	local model = mk("Model", {Name = "RRItem_" .. tostring(code)}, parent)
+	local function part(n, size, color, mat, cf, shape, trans)
+		local p = mk("Part", {Name = n, Size = size, Color = color, Material = mat or Enum.Material.SmoothPlastic, Transparency = trans or 0,
+			CanCollide = false, CanTouch = false, CanQuery = false, Massless = true, CastShadow = false, CFrame = cf,
+			TopSurface = Enum.SurfaceType.Smooth, BottomSurface = Enum.SurfaceType.Smooth}, model)
+		if shape then p.Shape = shape end
+		return p
+	end
+	local root = part("Grip", Vector3.new(.1, .1, .1), Color3.new(1, 1, 1), nil, CFrame.new(), nil, 1)
+	local function add(n, size, color, mat, cf, shape, trans)
+		local p = part(n, size, color, mat, cf, shape, trans)
+		mk("Weld", {Part0 = root, Part1 = p, C0 = cf}, p)
+		return p
+	end
+	local CYL = Enum.PartType.Cylinder
+	local up = CFrame.Angles(0, 0, math.rad(90))
+	local face = CFrame.Angles(0, math.rad(90), 0)
+	local function ring(prefix, centerCF, radius, n, thick, depth, color, mat)
+		local len = (2 * math.pi * radius / n) * 1.15
+		for i = 1, n do
+			local a = (i - 1) / n * math.pi * 2
+			add(prefix .. i, Vector3.new(thick, len, depth), color, mat or Enum.Material.Metal,
+				centerCF * CFrame.new(math.cos(a) * radius, math.sin(a) * radius, 0) * CFrame.Angles(0, 0, a))
+		end
+	end
+	if code == "m" then
+		add("Handle", Vector3.new(.07, .5, .07), CONFIG.gun.grip, Enum.Material.Wood, CFrame.new(0, .12, 0))
+		add("Collar", Vector3.new(.09, .06, .09), Color3.fromRGB(80, 86, 98), Enum.Material.Metal, CFrame.new(0, .4, 0))
+		ring("Rim", CFrame.new(0, .67, 0), .27, 12, .06, .07, Color3.fromRGB(80, 86, 98))
+		add("Lens", Vector3.new(.03, .5, .5), Color3.fromRGB(125, 215, 245), Enum.Material.Glass, CFrame.new(0, .67, 0) * face, CYL, .45)
+	elseif code == "b" then
+		add("Body", Vector3.new(.5, .2, .2), Color3.fromRGB(122, 66, 22), Enum.Material.SmoothPlastic, up, CYL, .08)
+		add("Shoulder", Vector3.new(.1, .2, .2), Color3.fromRGB(122, 66, 22), Enum.Material.SmoothPlastic, CFrame.new(0, .28, 0) * up, CYL, .08)
+		add("Neck", Vector3.new(.24, .09, .09), Color3.fromRGB(130, 72, 26), Enum.Material.SmoothPlastic, CFrame.new(0, .42, 0) * up, CYL, .08)
+		add("Cap", Vector3.new(.03, .11, .11), Color3.fromRGB(200, 190, 140), Enum.Material.Metal, CFrame.new(0, .555, 0) * up, CYL)
+		add("Label", Vector3.new(.2, .207, .207), Color3.fromRGB(228, 212, 160), Enum.Material.SmoothPlastic, CFrame.new(0, -.03, 0) * up, CYL)
+		add("LabelStripe", Vector3.new(.04, .212, .212), Color3.fromRGB(190, 40, 40), Enum.Material.SmoothPlastic, CFrame.new(0, -.03, 0) * up, CYL)
+	elseif code == "c" then
+		add("Paper", Vector3.new(.5, .05, .05), Color3.fromRGB(240, 235, 215), Enum.Material.SmoothPlastic, up, CYL)
+		add("Filter", Vector3.new(.13, .052, .052), Color3.fromRGB(205, 140, 80), Enum.Material.SmoothPlastic, CFrame.new(0, -.185, 0) * up, CYL)
+		local ember = add("Ember", Vector3.new(.03, .056, .056), Color3.fromRGB(255, 95, 35), Enum.Material.Neon, CFrame.new(0, .265, 0) * up, CYL)
+		mk("ParticleEmitter", {Rate = 14, Lifetime = NumberRange.new(.8, 1.5), Speed = NumberRange.new(.4, .9),
+			Size = NumberSequence.new(.04, .22), Transparency = NumberSequence.new(.55, 1),
+			Color = ColorSequence.new(Color3.fromRGB(205, 205, 205)), SpreadAngle = Vector2.new(15, 15),
+			Acceleration = Vector3.new(0, 1.2, 0)}, ember)
+		mk("PointLight", {Color = Color3.fromRGB(255, 110, 40), Range = 3, Brightness = 1.2}, ember)
+	elseif code == "h" then
+		ring("CuffA", CFrame.new(0, .15, 0), .15, 10, .045, .06, Color3.fromRGB(165, 172, 184))
+		add("LockA", Vector3.new(.09, .09, .09), Color3.fromRGB(70, 75, 85), Enum.Material.Metal, CFrame.new(0, .0, 0))
+		for i = 1, 3 do
+			add("Link" .. i, Vector3.new(.04, .1, .04), Color3.fromRGB(150, 158, 168), Enum.Material.Metal,
+				CFrame.new(0, -.05 - (i - 1) * .09, 0) * CFrame.Angles(0, (i % 2) * math.rad(90), 0))
+		end
+		ring("CuffB", CFrame.new(0, -.4, 0) * CFrame.Angles(0, math.rad(90), 0), .15, 10, .045, .06, Color3.fromRGB(165, 172, 184))
+		add("LockB", Vector3.new(.09, .09, .09), Color3.fromRGB(70, 75, 85), Enum.Material.Metal, CFrame.new(0, -.25, 0))
+	end
+	return model, root
+end
+
+local GEST = {
+	m = {deg = 84, elb = 0,   rest = CFrame.new(),                           act = CFrame.Angles(math.rad(-12), math.rad(38), 0)},
+	b = {deg = 90, elb = 75,  rest = CFrame.Angles(math.rad(-10), 0, 0),     act = CFrame.Angles(math.rad(-55), 0, 0)},
+	c = {deg = 80, elb = 125, rest = CFrame.Angles(math.pi, 0, 0),           act = CFrame.Angles(math.pi, 0, math.rad(18))},
+	h = {deg = 76, elb = 0,   rest = CFrame.new(),                           act = CFrame.Angles(math.rad(22), 0, 0)},
+}
+
+local function playItemModel(code, userId)
+	local ch = charOf(userId)
+	local g = GEST[code]
+	if not ch or not g then return end
+	local arm = newArm(ch, "Left")
+	if not arm then return end
+	if gun.itemModel then gun.itemModel:Destroy() gun.itemModel = nil end
+	local model, root = buildItem(code, ch)
+	local weld = mk("Weld", {Name = "ItemGrip", Part0 = arm.hand, Part1 = root, C0 = arm.grip * g.rest}, root)
+	gun.itemModel, gun.itemArm = model, arm
+	local restCF, actCF = arm.grip * g.rest, arm.grip * g.act
+	local dur = math.max(T.item, 2.0)
+
+	task.spawn(function()
+		armPose(arm, g.deg, g.elb, 0.4, Enum.EasingStyle.Quint)
+		task.wait(0.45)
+		if not model.Parent then return end
+		tweenC0(weld, 0.55, actCF, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
+		local hold = math.max(dur - 1.55, 0.4)
+		if code == "h" then
+			local t0 = os.clock()
+			while alive and weld.Parent and os.clock() - t0 < hold + 0.55 do
+				local t = os.clock() - t0
+				weld.C0 = actCF * CFrame.Angles(math.sin(t * 11) * 0.28, 0, math.sin(t * 7) * 0.12)
+				task.wait()
+			end
+		else
+			task.wait(hold + 0.55)
+		end
+		if not model.Parent then return end
+		tweenC0(weld, 0.3, restCF, Enum.EasingStyle.Sine)
+		armRestore(arm, 0.4)
+		task.wait(0.45)
+		if model.Parent then model:Destroy() end
+		if gun.itemModel == model then gun.itemModel, gun.itemArm = nil, nil end
+	end)
+end
+
+local function hitFx(ch, color)
+	if not ch then return end
+	local h = mk("Highlight", {FillColor = color or Color3.fromRGB(255, 0, 0), FillTransparency = 0.3, OutlineColor = color or Color3.fromRGB(255, 0, 0)}, ch)
+	TS:Create(h, TweenInfo.new(1), {FillTransparency = 1, OutlineTransparency = 1}):Play()
+	task.delay(1.2, function() h:Destroy() end)
+end
+local function playImpactSound(parent, hard)
+	if not CONFIG.bloodFX.impactSoundEnabled or math.random() > (CONFIG.bloodFX.impactSoundChance or 1) then return end
+	local soundName = hard and "finalImpact" or (math.random() < 0.35 and "bloodImpactAlt" or "bloodImpact")
+	local id = CONFIG.sfx[soundName]
+	if not id or id == "" then return end
+	local sound = mk("Sound", {
+		Name = "RR_BloodImpactSound", SoundId = id,
+		Volume = (CONFIG.sfxVolume[soundName] or 0.4) * rand(0.8, 1.12),
+		PlaybackSpeed = rand(0.86, 1.14), RollOffMaxDistance = 38,
+	}, parent)
+	sound:Play()
+	task.delay(4, function() if sound.Parent then sound:Destroy() end end)
+end
+
+local function makeTemporaryStain(hit, position, normal, tint)
+	if not CONFIG.bloodFX.stainsEnabled or not hit or not hit:IsA("BasePart") then return end
+	if lp.Character and hit:IsDescendantOf(lp.Character) then return end
+	local size = math.clamp(CONFIG.bloodFX.stainSize or 0.65, 0.2, 1.5) * rand(0.65, 1.2)
+	local stain = mk("Part", {
+		Name = "RR_TemporaryStylizedStain", Shape = Enum.PartType.Ball,
+		Size = Vector3.new(size, 0.025, size * rand(0.55, 1.0)),
+		Color = tint or Color3.fromRGB(115, 8, 18), Material = Enum.Material.SmoothPlastic,
+		Transparency = 0.2, Anchored = true, CanCollide = false, CanTouch = false, CanQuery = false,
+		CastShadow = false,
+		CFrame = CFrame.lookAt(position + normal * 0.018, position + normal) * CFrame.Angles(math.pi / 2, 0, rand(-math.pi, math.pi)),
+	}, workspace)
+	local fade = math.clamp(CONFIG.bloodFX.stainLifetime or 5, 1, 12)
+	task.delay(math.max(0.1, fade - 0.7), function()
+		if stain.Parent then
+			TS:Create(stain, TweenInfo.new(0.7), {Transparency = 1, Size = Vector3.new(0.02, 0.01, 0.02)}):Play()
+		end
+	end)
+	task.delay(fade, function() if stain.Parent then stain:Destroy() end end)
+end
+
+local function abstractImpactDebris(ch)
+	if not ch then return end
+	local root = ch:FindFirstChild("Head") or ch:FindFirstChild("UpperTorso") or ch:FindFirstChild("Torso") or ch:FindFirstChild("HumanoidRootPart")
+	if not root then return end
+	local count = math.clamp(CONFIG.bloodFX.finalDebrisCount or 10, 0, 20)
+	for i = 1, count do
+		local sz = rand(0.09, 0.2)
+		local piece = mk("Part", {
+			Name = "RR_StylizedImpactFragment", Shape = Enum.PartType.Block,
+			Size = Vector3.new(sz, sz * rand(0.6, 1.4), sz),
+			Color = (math.random() < 0.65) and Color3.fromRGB(100, 12, 20) or Color3.fromRGB(35, 30, 33),
+			Material = Enum.Material.SmoothPlastic, Anchored = false, CanCollide = false,
+			CanTouch = false, CanQuery = false, Massless = true, CastShadow = false,
+			CFrame = root.CFrame * CFrame.new(rand(-0.3, 0.3), rand(-0.15, 0.35), rand(-0.3, 0.3)),
+		}, workspace)
+		piece.AssemblyLinearVelocity = Vector3.new(rand(-18, 18), rand(5, 17), rand(-18, 18))
+		piece.AssemblyAngularVelocity = Vector3.new(rand(-9, 9), rand(-9, 9), rand(-9, 9))
+		local life = math.clamp(CONFIG.bloodFX.finalDebrisLifetime or 1.4, 0.4, 3)
+		task.delay(math.max(0.1, life - 0.45), function()
+			if piece.Parent then TS:Create(piece, TweenInfo.new(0.4), {Transparency = 1, Size = Vector3.new(0.01, 0.01, 0.01)}):Play() end
+		end)
+		task.delay(life, function() if piece.Parent then piece:Destroy() end end)
+	end
+end
+
+local function burst(ch, color, n, finalHit)
+	if not ch then return end
+	local head = ch:FindFirstChild("Head") or ch:FindFirstChild("HumanoidRootPart")
+	if not head then return end
+	local tint = color or Color3.fromRGB(170, 24, 30)
+	local amount = finalHit and math.max(n or 0, CONFIG.bloodFX.lastLifeBurst or 34) or (n or 24)
+	local e = mk("ParticleEmitter", {
+		Name = "RR_StylizedImpactParticles", Enabled = false,
+		Lifetime = finalHit and NumberRange.new(0.35, 0.9) or NumberRange.new(0.25, 0.7),
+		Speed = finalHit and NumberRange.new(8, 17) or NumberRange.new(5, 12),
+		Size = NumberSequence.new({NumberSequenceKeypoint.new(0, finalHit and 0.22 or 0.16), NumberSequenceKeypoint.new(1, 0)}),
+		Color = ColorSequence.new(tint), SpreadAngle = Vector2.new(180, 180),
+		Acceleration = Vector3.new(0, -26, 0), Drag = 2.2, Rotation = NumberRange.new(0, 360),
+		RotSpeed = NumberRange.new(-180, 180), LightEmission = 0.05,
+	}, head)
+	e:Emit(math.clamp(amount, 1, 60))
+	task.delay(1.5, function() if e.Parent then e:Destroy() end end)
+	if finalHit then abstractImpactDebris(ch) end
+	if not CONFIG.bloodFX.enabled then return end
+	for i = 1, math.clamp(CONFIG.bloodFX.dropletCount + (finalHit and 6 or 0), 0, 20) do
+		local size = math.clamp(CONFIG.bloodFX.dropletSize, 0.04, 0.22) * rand(0.55, 1.3)
+		local drop = mk("Part", {
+			Name = "RR_StylizedRedDroplet", Shape = Enum.PartType.Ball,
+			Size = Vector3.new(size, size, size), Color = tint, Material = Enum.Material.SmoothPlastic,
+			Transparency = 0.1, Anchored = false, CanCollide = false, CanTouch = true, CanQuery = false,
+			Massless = true, CastShadow = false,
+			CFrame = head.CFrame * CFrame.new(rand(-0.28, 0.28), rand(-0.15, 0.4), rand(-0.28, 0.28)),
+		}, workspace)
+		drop.AssemblyLinearVelocity = Vector3.new(rand(-16, 16), rand(5, 17), rand(-16, 16))
+		local touched, touchConn = false, nil
+		touchConn = drop.Touched:Connect(function(hit)
+			if touched or not hit or hit == drop or hit:IsDescendantOf(ch) then return end
+			touched = true
+			if touchConn then touchConn:Disconnect() end
+			playImpactSound(hit:IsA("BasePart") and hit or drop, finalHit)
+			local ok, normal = pcall(function()
+				local delta = drop.Position - hit.Position
+				return delta.Magnitude > 0.001 and delta.Unit or Vector3.yAxis
+			end)
+			if ok then makeTemporaryStain(hit, drop.Position, normal, tint) end
+			drop.Anchored, drop.CanTouch = true, false
+			drop.AssemblyLinearVelocity = Vector3.zero
+			TS:Create(drop, TweenInfo.new(0.35), {Transparency = 1, Size = Vector3.new(0.01, 0.01, 0.01)}):Play()
+			task.delay(0.4, function() if drop.Parent then drop:Destroy() end end)
+		end)
+		task.delay(math.clamp(CONFIG.bloodFX.dropletLifetime, 0.5, 4), function()
+			if touchConn then touchConn:Disconnect() end
+			if drop.Parent then drop:Destroy() end
+		end)
+	end
+end
+
+local function popText(ch, text, color)
+	if not CONFIG.effects.popups then return end
+	local head = ch and ch:FindFirstChild("Head")
+	if not head then return end
+	local bb = mk("BillboardGui", {Size = UDim2.fromOffset(180, 50), StudsOffset = Vector3.new(0, 2.6, 0), AlwaysOnTop = true, Adornee = head}, head)
+	local l = mk("TextLabel", {Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = text, TextColor3 = color or Color3.new(1, 1, 1),
+		Font = Enum.Font.GothamBlack, TextScaled = true, TextStrokeTransparency = 0.2}, bb)
+	TS:Create(bb, TweenInfo.new(1.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {StudsOffset = Vector3.new(0, 5, 0)}):Play()
+	task.delay(0.9, function() TS:Create(l, TweenInfo.new(0.5), {TextTransparency = 1, TextStrokeTransparency = 1}):Play() end)
+	task.delay(1.5, function() bb:Destroy() end)
+end
+local function faceTarget(sch, tch)
+	local r, t = sch and sch:FindFirstChild("HumanoidRootPart"), tch and tch:FindFirstChild("HumanoidRootPart")
+	if not r or not t then return end
+	local goal = CFrame.lookAt(r.Position, Vector3.new(t.Position.X, r.Position.Y, t.Position.Z))
+	TS:Create(r, TweenInfo.new(0.7, Enum.EasingStyle.Sine), {CFrame = goal}):Play()
+end
+
+local baseFov = (workspace.CurrentCamera and workspace.CurrentCamera.FieldOfView) or 70
+local camTweens, camTok = {}, 0
+local function camCancel()
+	for _, t in ipairs(camTweens) do pcall(function() t:Cancel() end) end
+	camTweens = {}
+end
+local function camTween(cam, info, goal)
+	local tw = TS:Create(cam, info, goal)
+	tw:Play()
+	table.insert(camTweens, tw)
+	return tw
+end
+local function cinematic(sid, tid, hold)
+	if not CONFIG.camera.cinematic then return end
+	local cam = workspace.CurrentCamera
+	local sch, tch = charOf(sid), charOf(tid)
+	local sh = sch and sch:FindFirstChild("Head")
+	if not cam or not sh then return end
+	local th = tch and tch:FindFirstChild("Head")
+	camTok += 1
+	local tok = camTok
+	camCancel()
+	local cf0, cf1
+	if sid == tid or not th then
+		local focus = sh.Position + Vector3.new(0, 0.1, 0)
+		local fwd, right = sh.CFrame.LookVector, sh.CFrame.RightVector
+		cf0 = CFrame.lookAt(focus + fwd * 6 + right * 2.2 + Vector3.new(0, 0.6, 0), focus)
+		cf1 = CFrame.lookAt(focus + fwd * 3.4 + right * 1.3 + Vector3.new(0, 0.3, 0), focus)
+	else
+		local a, b = sh.Position, th.Position
+		local mid, dir = (a + b) / 2, b - a
+		local side = dir:Cross(Vector3.yAxis)
+		side = side.Magnitude > 0.01 and side.Unit or Vector3.xAxis
+		local dist = dir.Magnitude * 0.5 + 7
+		local look = dir.Magnitude > 0.01 and dir.Unit or Vector3.zAxis
+		cf0 = CFrame.lookAt(mid + side * dist + Vector3.new(0, 2.5, 0), mid)
+		cf1 = CFrame.lookAt(mid + side * (dist - 2.6) + Vector3.new(0, 1.5, 0), mid + look * (dir.Magnitude * 0.18))
+	end
+	cam.CameraType = Enum.CameraType.Scriptable
+	camTween(cam, TweenInfo.new(1.0, Enum.EasingStyle.Sine), {CFrame = cf0, FieldOfView = CONFIG.camera.fov})
+	task.delay(1.0, function()
+		if camTok ~= tok or not alive then return end
+		camTween(cam, TweenInfo.new(math.max((hold or 3) - 1.0, 0.4), Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+			{CFrame = cf1, FieldOfView = CONFIG.camera.fov - 10})
+	end)
+end
+local function camPunch(a)
+	local cam = workspace.CurrentCamera
+	if not cam then return end
+	local f = cam.FieldOfView
+	TS:Create(cam, TweenInfo.new(0.05), {FieldOfView = f - a}):Play()
+	task.delay(0.06, function() TS:Create(cam, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {FieldOfView = f}):Play() end)
+end
+local function camRelease()
+	camTok += 1
+	camCancel()
+	local cam = workspace.CurrentCamera
+	if not cam then return end
+	if cam.CameraType == Enum.CameraType.Scriptable then cam.CameraType = Enum.CameraType.Custom end
+	TS:Create(cam, TweenInfo.new(0.8), {FieldOfView = baseFov}):Play()
+end
+
+local C = {
+	bg = Color3.fromRGB(16, 16, 20), panel = Color3.fromRGB(28, 28, 35), panel2 = Color3.fromRGB(44, 44, 54),
+	text = Color3.fromRGB(236, 236, 242), muted = Color3.fromRGB(140, 140, 154), disabled = Color3.fromRGB(46, 46, 54),
+	red = Color3.fromRGB(214, 48, 48), blue = Color3.fromRGB(70, 140, 230), green = Color3.fromRGB(46, 160, 84),
+	orange = Color3.fromRGB(214, 126, 36), gold = Color3.fromRGB(255, 208, 64), purple = Color3.fromRGB(112, 92, 170),
+}
+
+local mainFrame = mk("Frame", {Name = "Main", Size = CONFIG.ui.size, Position = CONFIG.ui.position, BackgroundColor3 = C.bg, BorderSizePixel = 0, ClipsDescendants = true}, gui)
+mk("UICorner", {CornerRadius = UDim.new(0, 10)}, mainFrame)
+mk("UIStroke", {Color = CONFIG.ui.accent, Transparency = 0.42, Thickness = 1.4}, mainFrame)
+mk("UIGradient", {Rotation = 90, Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 25, 34)), ColorSequenceKeypoint.new(1, Color3.fromRGB(10, 10, 15))})}, mainFrame)
+local titleBar = mk("Frame", {Size = UDim2.new(1, 0, 0, 42), BackgroundColor3 = C.panel, BorderSizePixel = 0}, mainFrame)
+mk("UIGradient", {Rotation = 0, Color = ColorSequence.new({ColorSequenceKeypoint.new(0, CONFIG.ui.accent), ColorSequenceKeypoint.new(1, Color3.fromRGB(40, 35, 55))})}, titleBar)
+mk("Frame", {Name = "HeaderAccent", Size = UDim2.new(1, 0, 0, 2), Position = UDim2.new(0, 0, 1, -2), BackgroundColor3 = Color3.fromRGB(255, 255, 255), BackgroundTransparency = .35, BorderSizePixel = 0}, titleBar)
+mk("TextLabel", {Size = UDim2.new(1, -80, 1, 0), Position = UDim2.fromOffset(14, 0), BackgroundTransparency = 1, Text = CONFIG.ui.title,
+	TextColor3 = Color3.fromRGB(255, 248, 240), Font = Enum.Font.GothamBlack, TextSize = 16, TextXAlignment = Enum.TextXAlignment.Left}, titleBar)
+local function tbButton(txt, x)
+	local b = mk("TextButton", {Size = UDim2.fromOffset(26, 24), Position = UDim2.new(1, x, 0, 7), Text = txt, BackgroundColor3 = C.panel2,
+		TextColor3 = C.text, Font = Enum.Font.GothamBold, TextSize = 16, AutoButtonColor = true, BorderSizePixel = 0}, titleBar)
+	mk("UICorner", {CornerRadius = UDim.new(0, 6)}, b)
+	return b
+end
+local closeB, minB = tbButton("×", -34), tbButton("–", -66)
+
+local content = mk("ScrollingFrame", {Position = UDim2.fromOffset(0, 46), Size = UDim2.new(1, 0, 1, -70), BackgroundTransparency = 1,
+	BorderSizePixel = 0, ScrollBarThickness = 4, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ScrollingDirection = Enum.ScrollingDirection.Y}, mainFrame)
+mk("UIPadding", {PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 14), PaddingTop = UDim.new(0, 4), PaddingBottom = UDim.new(0, 10)}, content)
+mk("UIListLayout", {Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder}, content)
+local statusLbl = mk("TextLabel", {Size = UDim2.new(1, -20, 0, 20), Position = UDim2.new(0, 10, 1, -22), BackgroundTransparency = 1, Text = "",
+	TextColor3 = C.muted, Font = Enum.Font.Code, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left}, mainFrame)
+
+do
+	local dragging, dragStart, startPos
+	titleBar.InputBegan:Connect(function(i)
+		if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+			dragging, dragStart, startPos = true, i.Position, mainFrame.Position
+			i.Changed:Connect(function() if i.UserInputState == Enum.UserInputState.End then dragging = false end end)
+		end
+	end)
+	connect(UIS.InputChanged, function(i)
+		if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+			local d = i.Position - dragStart
+			mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
+		end
+	end)
+end
+local minimized = false
+minB.Activated:Connect(function()
+	minimized = not minimized
+	content.Visible, statusLbl.Visible = not minimized, not minimized
+	TS:Create(mainFrame, TweenInfo.new(0.25), {Size = minimized and UDim2.new(CONFIG.ui.size.X.Scale, CONFIG.ui.size.X.Offset, 0, 42) or CONFIG.ui.size}):Play()
+end)
+connect(UIS.InputBegan, function(i, gp)
+	if not gp and i.KeyCode == CONFIG.toggleKey then mainFrame.Visible = not mainFrame.Visible end
+end)
+
+local function bannerLabel(y, h, size, font)
+	return mk("TextLabel", {Size = UDim2.new(1, 0, 0, h), Position = UDim2.new(0, 0, 0.13, y), BackgroundTransparency = 1, Text = "", RichText = true,
+		Font = font, TextSize = size, TextColor3 = C.text, TextStrokeTransparency = 1, TextTransparency = 1, Visible = false, ZIndex = 10}, gui)
+end
+local banner1 = bannerLabel(0, 56, CONFIG.ui.bannerSize, Enum.Font.GothamBlack)
+local banner2 = bannerLabel(56, 30, 20, Enum.Font.GothamBold)
+local bannerTok = 0
+local function banner(t1, t2, dur)
+	bannerTok += 1
+	local tok = bannerTok
+	banner1.Text, banner2.Text = t1 or "", t2 or ""
+	for _, l in ipairs({banner1, banner2}) do
+		l.Visible = true
+		l.TextTransparency, l.TextStrokeTransparency = 1, 1
+		TS:Create(l, TweenInfo.new(0.3), {TextTransparency = 0, TextStrokeTransparency = 0.3}):Play()
+	end
+	task.delay(dur or 3, function()
+		if tok ~= bannerTok then return end
+		for _, l in ipairs({banner1, banner2}) do TS:Create(l, TweenInfo.new(0.4), {TextTransparency = 1, TextStrokeTransparency = 1}):Play() end
+		task.delay(0.45, function() if tok == bannerTok then banner1.Visible, banner2.Visible = false, false end end)
+	end)
+end
+
+local feed = mk("Frame", {Size = UDim2.fromOffset(340, 200), Position = UDim2.new(0, 16, 1, -230), BackgroundTransparency = 1}, gui)
+mk("UIListLayout", {VerticalAlignment = Enum.VerticalAlignment.Bottom, Padding = UDim.new(0, 3), SortOrder = Enum.SortOrder.LayoutOrder}, feed)
+local feedN = 0
+local function log(txt)
+	feedN += 1
+	local l = mk("TextLabel", {Size = UDim2.new(1, 0, 0, 20), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.4, Text = "  " .. txt,
+		RichText = true, Font = Enum.Font.Gotham, TextSize = 13, TextColor3 = C.text, TextXAlignment = Enum.TextXAlignment.Left, LayoutOrder = feedN}, feed)
+	mk("UICorner", {CornerRadius = UDim.new(0, 5)}, l)
+	mk("UIStroke", {Color = CONFIG.ui.accent, Transparency = .72, Thickness = 1}, l)
+	local labels = {}
+	for _, c in ipairs(feed:GetChildren()) do if c:IsA("TextLabel") then labels[#labels + 1] = c end end
+	while #labels > 7 do table.remove(labels, 1):Destroy() end
+	task.delay(14, function()
+		if l.Parent then
+			TS:Create(l, TweenInfo.new(0.6), {TextTransparency = 1, BackgroundTransparency = 1}):Play()
+			task.delay(0.7, function() if l.Parent then l:Destroy() end end)
+		end
+	end)
+end
+
+local fx = {}
+local flashF = mk("Frame", {Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 0, 0), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 4}, gui)
+local barTop = mk("Frame", {Size = UDim2.new(1, 0, 0, 0), BackgroundColor3 = Color3.new(0, 0, 0), BorderSizePixel = 0, ZIndex = 5}, gui)
+local barBot = mk("Frame", {Size = UDim2.new(1, 0, 0, 0), Position = UDim2.fromScale(0, 1), AnchorPoint = Vector2.new(0, 1), BackgroundColor3 = Color3.new(0, 0, 0), BorderSizePixel = 0, ZIndex = 5}, gui)
+local cc = mk("ColorCorrectionEffect", {Name = "RRCC"}, Lighting)
+local blur = mk("BlurEffect", {Name = "RRBlur", Size = 0}, Lighting)
+function fx.tension(on)
+	if not CONFIG.effects.colorGrade then return end
+	TS:Create(cc, TweenInfo.new(1.2), {Saturation = on and -0.55 or 0, Contrast = on and 0.18 or 0, Brightness = on and -0.06 or 0}):Play()
+	TS:Create(blur, TweenInfo.new(1.2), {Size = on and 3 or 0}):Play()
+end
+function fx.bars(on)
+	if not CONFIG.camera.letterbox then return end
+	local sz = UDim2.new(1, 0, on and 0.1 or 0, 0)
+	TS:Create(barTop, TweenInfo.new(0.8), {Size = sz}):Play()
+	TS:Create(barBot, TweenInfo.new(0.8), {Size = sz}):Play()
+end
+function fx.flash(color, a)
+	if not CONFIG.effects.flash then return end
+	flashF.BackgroundColor3 = color or Color3.new(1, 0, 0)
+	flashF.BackgroundTransparency = a or 0.35
+	TS:Create(flashF, TweenInfo.new(1.0), {BackgroundTransparency = 1}):Play()
+end
+function fx.shake(mag, dur)
+	if not CONFIG.effects.shake then return end
+	dur = dur or 0.45
+	task.spawn(function()
+		local cam = workspace.CurrentCamera
+		if not cam then return end
+		local scripted = cam.CameraType == Enum.CameraType.Scriptable
+		local base = cam.CFrame
+		local hum = lp.Character and lp.Character:FindFirstChildOfClass("Humanoid")
+		local t0 = os.clock()
+		while alive and os.clock() - t0 < dur do
+			local k = 1 - (os.clock() - t0) / dur
+			local off = Vector3.new((math.random() - 0.5) * mag * k, (math.random() - 0.5) * mag * k, 0)
+			if scripted and cam.CameraType == Enum.CameraType.Scriptable then cam.CFrame = base * CFrame.new(off)
+			elseif hum then hum.CameraOffset = off end
+			task.wait(0.03)
+		end
+		if scripted and cam.CameraType == Enum.CameraType.Scriptable then cam.CFrame = base end
+		if hum then hum.CameraOffset = Vector3.zero end
+	end)
+end
+
+local MUSIC = CONFIG.music
+local TRACK_ORDER = {"waiting", "lives3", "lives2", "lives1", "dead", "win", "game"}
+local EXTS = {".ogg", ".mp3"}
+local musicAssets, curAsset, curSound = {}, nil, nil
+local getAsset = getcustomasset or getsynasset
+
+local lastHttpErr = "no http function"
+local function httpGet(url)
+	local req = (syn and syn.request) or (http and http.request) or http_request or request
+	if req then
+		local ok, res = pcall(req, {Url = url, Method = "GET", Headers = {["User-Agent"] = "Mozilla/5.0"}})
+		if ok and res and res.Body and (res.StatusCode or 200) < 300 then return res.Body end
+		lastHttpErr = ok and ("HTTP " .. tostring(res and res.StatusCode)) or tostring(res)
+	end
+	local ok, body = pcall(function() return game:HttpGet(url) end)
+	if ok then return body end
+	lastHttpErr = tostring(body):sub(1, 80)
+end
+local function sniffExt(data)
+	if type(data) ~= "string" or #data < 1000 then return nil end
+	if data:sub(1, 4) == "OggS" then return ".ogg" end
+	if data:sub(1, 3) == "ID3" then return ".mp3" end
+	local b1, b2 = data:byte(1, 2)
+	if b1 == 0xFF and b2 and b2 >= 0xE0 then return ".mp3" end
+	return nil
+end
+local function fadeOutAndKill(s_)
+	if not s_ then return end
+	local tw = TS:Create(s_, TweenInfo.new(MUSIC.fadeOut, Enum.EasingStyle.Sine), {Volume = 0})
+	tw:Play()
+	tw.Completed:Connect(function() s_:Destroy() end)
+	task.delay(MUSIC.fadeOut + 1, function() if s_.Parent then s_:Destroy() end end)
+end
+local function setMusic(key)
+	local asset
+	if key then asset = musicAssets[key] or musicAssets[MUSIC.fallbackKey] end
+	if asset == curAsset then return end
+	curAsset = asset
+	fadeOutAndKill(curSound)
+	curSound = nil
+	if not asset then return end
+	local s_ = mk("Sound", {Name = "RRMusic", SoundId = asset, Looped = true, Volume = 0}, SoundService)
+	pcall(function() s_:Play() end)
+	TS:Create(s_, TweenInfo.new(MUSIC.fadeIn, Enum.EasingStyle.Sine), {Volume = MUSIC.volume}):Play()
+	curSound = s_
+	task.spawn(function()
+		local t0 = os.clock()
+		while alive and s_.Parent and s_.TimeLength == 0 and os.clock() - t0 < 8 do task.wait(0.25) end
+		if alive and s_.Parent and s_.TimeLength == 0 then warn("[RR] music file did not load - delete it from the RussianRoulette folder and re-run") end
+	end)
+end
+local function updateMusic()
+	if not alive or not MUSIC.enabled then return end
+	local key = "waiting"
+	if G then
+		if G.over then key = (G.winner == me) and "win" or "dead"
+		else
+			local n
+			if MUSIC.lifeMode == "lowest" then
+				n = 99
+				for _, id in ipairs(G.order) do local l = G.lives[id] or 0 if l > 0 and l < n then n = l end end
+				if n == 99 then n = 0 end
+			else
+				n = G.lives[me] or 0
+			end
+			key = n <= 0 and "dead" or ("lives" .. math.min(n, 3))
+		end
+	end
+	setMusic(key)
+end
+task.spawn(function()
+	if not MUSIC.enabled then return end
+	if not (writefile and isfile and getAsset) then
+		warn("[RR] your executor has no writefile/isfile/getcustomasset - music disabled")
+		return
+	end
+	pcall(function() if makefolder and not isfolder(MUSIC.folder) then makefolder(MUSIC.folder) end end)
+	for _, key in ipairs(TRACK_ORDER) do
+		local t = MUSIC.tracks[key]
+		if not alive then return end
+		if t then
+			local base = (t.file:gsub("%.%w+$", ""))
+			local path
+			for _, e in ipairs(EXTS) do
+				local p = MUSIC.folder .. "/" .. base .. e
+				if isfile(p) then path = p break end
+			end
+			if not path then
+				local legacy = MUSIC.folder .. "/" .. t.file
+				if isfile(legacy) then path = legacy end
+			end
+			if path and readfile then
+				local ok, data = pcall(readfile, path)
+				local ext = ok and sniffExt(data)
+				if not ext then
+					warn("[RR] '" .. path .. "' is not valid audio, replacing it")
+					if delfile then pcall(delfile, path) end
+					path = nil
+				elseif path:sub(-#ext) ~= ext then
+					local np = MUSIC.folder .. "/" .. base .. ext
+					pcall(writefile, np, data)
+					if delfile then pcall(delfile, path) end
+					path = np
+				end
+			end
+			if (not path or MUSIC.redownload) and t.url then
+				local urls = type(t.url) == "table" and t.url or {t.url}
+				for _, u in ipairs(urls) do
+					if u ~= "" then
+						local data = httpGet(u)
+						local ext = sniffExt(data)
+						if ext then
+							local np = MUSIC.folder .. "/" .. base .. ext
+							pcall(writefile, np, data)
+							if isfile(np) then path = np break end
+						end
+					end
+				end
+				if not path then warn("[RR] failed to download music track '" .. key .. "' (" .. tostring(lastHttpErr) .. "). Put " .. base .. ".ogg or " .. base .. ".mp3 in your executor workspace/" .. MUSIC.folder .. " folder instead.") end
+			end
+			if path then
+				local ok, asset = pcall(getAsset, path)
+				if ok and asset then musicAssets[key] = asset updateMusic() end
+			end
+		end
+	end
+end)
+
+local ord = 0
+local function nextOrd() ord += 1 return ord end
+local function corner(o, r) mk("UICorner", {CornerRadius = UDim.new(0, r or 8)}, o) end
+local function card(h, color)
+	local f = mk("Frame", {Size = UDim2.new(1, 0, 0, h), BackgroundColor3 = color or C.panel, BorderSizePixel = 0, LayoutOrder = nextOrd()}, content)
+	corner(f, 9)
+	mk("UIGradient", {Rotation = 90, Color = ColorSequence.new({ColorSequenceKeypoint.new(0, color or C.panel), ColorSequenceKeypoint.new(1, C.bg)})}, f)
+	mk("UIStroke", {Color = Color3.fromRGB(95, 95, 120), Transparency = .72, Thickness = 1}, f)
+	return f
+end
+local function lbl(parent, txt, o)
+	o = o or {}
+	return mk("TextLabel", {BackgroundTransparency = 1, Text = txt, RichText = true, TextWrapped = true, Font = o.font or Enum.Font.Gotham,
+		TextSize = o.size or 14, TextColor3 = o.color or C.text, TextXAlignment = o.align or Enum.TextXAlignment.Left,
+		Size = o.sz or UDim2.new(1, 0, 0, o.h or 18), Position = o.pos or UDim2.new(), LayoutOrder = parent == content and nextOrd() or 0}, parent)
+end
+local function section(txt) lbl(content, txt, {size = 11, color = C.muted, font = Enum.Font.GothamBold, h = 14}) end
+local function button(parent, txt, color, cb, enabled, h, sz, pos)
+	local off = enabled == false
+	local b = mk("TextButton", {Size = sz or UDim2.new(1, 0, 0, h or 36), Position = pos or UDim2.new(), BackgroundColor3 = off and C.disabled or color, Text = txt, RichText = true,
+		Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = off and C.muted or Color3.new(1, 1, 1), AutoButtonColor = false, BorderSizePixel = 0,
+		LayoutOrder = parent == content and nextOrd() or 0}, parent)
+	corner(b, 7)
+	mk("UIStroke", {Color = Color3.fromRGB(255, 255, 255), Transparency = .82, Thickness = 1}, b)
+	if not off then
+		local hover = color:Lerp(Color3.new(1, 1, 1), 0.18)
+		b.MouseEnter:Connect(function() TS:Create(b, TweenInfo.new(0.12), {BackgroundColor3 = hover}):Play() end)
+		b.MouseLeave:Connect(function() TS:Create(b, TweenInfo.new(0.12), {BackgroundColor3 = color}):Play() end)
+		b.Activated:Connect(cb)
+	end
+	return b
+end
+local function pills(parent, n, max, color, pos)
+	local row = mk("Frame", {BackgroundTransparency = 1, Position = pos, Size = UDim2.fromOffset(max * 18, 12)}, parent)
+	for i = 1, max do
+		local p = mk("Frame", {Size = UDim2.fromOffset(14, 10), Position = UDim2.fromOffset((i - 1) * 18, 0), BackgroundColor3 = i <= n and color or C.disabled, BorderSizePixel = 0}, row)
+		corner(p, 3)
+	end
+end
+
+local lastAct = 0
+lobbyRefreshAt = 0
+local function act(action, a1, a2)
+	if not G or G.busy or G.over then return end
+	if os.clock() < (G.waitUntil or 0) or os.clock() - lastAct < 0.5 then return end
+	lastAct = os.clock()
+	if G.host == me then
+		hostAct(me, action, a1 or "", a2 or "")
+	else
+		G.waitUntil = os.clock() + 4
+		send(("ACT:%s:%s:%s:%s"):format(enc(G.host), action, a1 or "", a2 or ""))
+	end
+	refresh()
+end
+
+local function opponents(onlyUncuffed)
+	local t = {}
+	for _, id in ipairs(G.order) do
+		if id ~= me and (G.lives[id] or 0) > 0 and not (onlyUncuffed and G.cuff[id]) then t[#t + 1] = id end
+	end
+	return t
+end
+local function useItem(code)
+	if code == "h" then
+		local opps = opponents(true)
+		if #opps == 0 then log("<font color='#aaaaaa'>Nobody to handcuff</font>") return end
+		if #opps == 1 then act("i", "h", enc(opps[1])) else cuffPick = true refresh() end
+	elseif code == "c" and (G.lives[me] or 0) >= CONFIG.rules.maxLives then
+		log("<font color='#aaaaaa'>You are already at full health</font>")
+	else
+		act("i", code, "")
+	end
+end
+
+local function createLobby()
+	if lobby or G then return end
+	lobby = {host = me, members = {me}}
+	bcast("LOBBY", enc(me), 1)
+	refresh()
+end
+local function addBot()
+	if not lobby or lobby.host ~= me or G or #lobby.members >= MAX_PLAYERS then return end
+	local n = 1
+	while table.find(lobby.members, BOT_BASE + n) do n += 1 end
+	table.insert(lobby.members, BOT_BASE + n)
+	bcast("LST", enc(me), idsStr(lobby.members))
+end
+local function startGame()
+	if not lobby or lobby.host ~= me or #lobby.members < 2 or G or HS then return end
+	local members = {}
+	for _, id in ipairs(lobby.members) do members[#members + 1] = id end
+	hostNew(members)
+	startRound(members[math.random(#members)])
+end
+local function leave()
+	if G then
+		if G.host == me then bcast("CLOSE", enc(me)) else send("LEAVE:" .. enc(G.host)) endGame() end
+	elseif lobby then
+		if lobby.host == me then bcast("CLOSE", enc(me)) else send("LEAVE:" .. enc(lobby.host)) lobby = nil end
+	end
+	refresh()
+end
+
+local function playerCard(id)
+	local dead = (G.lives[id] or 0) <= 0
+	local isH = G.holder == id and not dead
+	local f = card(52, isH and Color3.fromRGB(54, 46, 26) or C.panel)
+	local stripe = mk("Frame", {Size = UDim2.new(0, 4, 1, -14), Position = UDim2.fromOffset(7, 7), BorderSizePixel = 0,
+		BackgroundColor3 = dead and C.disabled or (isH and C.gold or C.panel2)}, f)
+	corner(stripe, 2)
+	local nm = nameOf(id) .. (id == me and " (you)" or "")
+	lbl(f, dead and ("<s>" .. nm .. "</s>") or ("<b>" .. nm .. "</b>"), {pos = UDim2.fromOffset(20, 6), sz = UDim2.new(1, -120, 0, 18), color = dead and C.muted or C.text})
+	local tags = {}
+	if dead then tags[#tags + 1] = "<font color='#888888'>DEAD</font>" end
+	if isH then tags[#tags + 1] = "<font color='#ffd040'>GUN</font>" end
+	if G.cuff[id] and not dead then tags[#tags + 1] = "<font color='#5aa0ff'>CUFFED</font>" end
+	lbl(f, table.concat(tags, "  "), {pos = UDim2.new(1, -112, 0, 6), sz = UDim2.fromOffset(104, 18), align = Enum.TextXAlignment.Right, size = 12, font = Enum.Font.GothamBold})
+	pills(f, G.lives[id] or 0, math.max(CONFIG.rules.maxLives, G.lives[id] or 0), C.red, UDim2.fromOffset(20, 32))
+end
+
+local function viewGame()
+	local meAlive = (G.lives[me] or 0) > 0
+	local ready = not G.busy and not G.over and os.clock() >= (G.waitUntil or 0)
+	local myTurn = ready and meAlive and G.holder == me
+	if not myTurn then cuffPick = false end
+
+	local hdr = card(90)
+	lbl(hdr, "ROUND " .. (G.round or 1), {pos = UDim2.fromOffset(14, 8), sz = UDim2.new(0.5, 0, 0, 22), size = 18, font = Enum.Font.GothamBlack, color = CONFIG.ui.accent})
+	lbl(hdr, ("<font color='#f2d28b'>%d / 6 BULLETS LEFT</font>"):format(G.bulletsLeft or 6),
+		{pos = UDim2.new(0.4, 0, 0, 10), sz = UDim2.new(0.6, -14, 0, 18), align = Enum.TextXAlignment.Right, size = 12, font = Enum.Font.GothamBold})
+	local turnTxt
+	if G.over then turnTxt = "Game over"
+	elseif not meAlive then turnTxt = "<font color='#888888'>You are dead - spectating</font>"
+	elseif G.holder == me then turnTxt = myTurn and "<font color='#ffd040'><b>YOUR TURN</b></font>" or "<font color='#ffd040'>You have the gun...</font>"
+	else turnTxt = "Waiting for <b>" .. nameOf(G.holder) .. "</b>..." end
+	lbl(hdr, turnTxt, {pos = UDim2.fromOffset(14, 34), sz = UDim2.new(1, -28, 0, 18), size = 14})
+	local row = mk("Frame", {BackgroundTransparency = 1, Position = UDim2.fromOffset(14, 60), Size = UDim2.new(1, -28, 0, 22)}, hdr)
+	mk("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 4), VerticalAlignment = Enum.VerticalAlignment.Center}, row)
+	for i = 1, 6 do
+		local left = i <= (G.bulletsLeft or 6)
+		local pl = mk("Frame", {Size = UDim2.fromOffset(25, 8), BackgroundColor3 = left and Color3.fromRGB(222, 190, 112) or C.disabled, BackgroundTransparency = left and 0 or .25, BorderSizePixel = 0}, row)
+		corner(pl, 4)
+	end
+
+	section("PLAYERS")
+	for _, id in ipairs(G.order) do playerCard(id) end
+
+	local list = G.items[me]
+	if CONFIG.rules.items and meAlive and list and #list > 0 then
+		section("YOUR ITEMS")
+		local rows = math.ceil(#list / 2)
+		local grid = mk("Frame", {Size = UDim2.new(1, 0, 0, rows * 50 - 4), BackgroundTransparency = 1, LayoutOrder = nextOrd()}, content)
+		mk("UIGridLayout", {CellSize = UDim2.new(0.5, -4, 0, 46), CellPadding = UDim2.fromOffset(8, 4), SortOrder = Enum.SortOrder.LayoutOrder}, grid)
+		for i, code in ipairs(list) do
+			local it = ITEMS[code] or {name = "?", desc = ""}
+			local b = mk("TextButton", {BackgroundColor3 = myTurn and C.purple or C.disabled, AutoButtonColor = false, BorderSizePixel = 0, LayoutOrder = i, RichText = true, TextWrapped = true,
+				Text = ("<b>%s</b>\n<font size='11' color='#c8c8d8'>%s</font>"):format(it.name, it.desc), Font = Enum.Font.Gotham, TextSize = 13,
+				TextColor3 = myTurn and Color3.new(1, 1, 1) or C.muted}, grid)
+			corner(b, 7)
+			mk("UIGradient", {Rotation = 90, Color = ColorSequence.new({ColorSequenceKeypoint.new(0, myTurn and C.purple or C.disabled), ColorSequenceKeypoint.new(1, C.bg)})}, b)
+			mk("UIStroke", {Color = myTurn and Color3.fromRGB(185, 155, 255) or C.panel2, Transparency = .35, Thickness = 1}, b)
+			if myTurn then b.Activated:Connect(function() useItem(code) end) end
+		end
+	end
+
+	if cuffPick then
+		section("HANDCUFF WHO?")
+		for _, id in ipairs(opponents(true)) do
+			button(content, "Cuff " .. nameOf(id), C.blue, function() cuffPick = false act("i", "h", enc(id)) end)
+		end
+		button(content, "Cancel", C.panel2, function() cuffPick = false refresh() end)
+	else
+		section("ACTIONS")
+		button(content, "SHOOT YOURSELF   <font size='11'>(blank = another turn)</font>", C.orange, function() act("s") end, myTurn)
+		button(content, "SPIN CYLINDER   <font size='11'>(reshuffle shells)</font>", C.blue, function() act("p") end,
+			myTurn and (not G.spun or not CONFIG.rules.spinOncePerTurn))
+		for _, id in ipairs(opponents(false)) do
+			button(content, "SHOOT " .. nameOf(id):upper() .. "   <font size='11'>(passes the gun)</font>", C.red, function() act("o", enc(id)) end, myTurn)
+		end
+	end
+	button(content, "Leave game", C.panel2, leave)
+end
+
+local function viewLobby()
+	local hdr = card(54)
+	lbl(hdr, ("<b>%s's lobby</b>"):format(nameOf(lobby.host)), {pos = UDim2.fromOffset(14, 8), sz = UDim2.new(1, -28, 0, 20), size = 16})
+	lbl(hdr, ("%d / %d players"):format(#lobby.members, MAX_PLAYERS), {pos = UDim2.fromOffset(14, 30), sz = UDim2.new(1, -28, 0, 16), color = C.muted, size = 13})
+	for _, id in ipairs(lobby.members) do
+		local f = card(36)
+		lbl(f, nameOf(id) .. (id == lobby.host and "  <font color='#ffd040'>HOST</font>" or "") .. (isBot(id) and "  <font color='#9a8cd0'>BOT</font>" or ""),
+			{pos = UDim2.fromOffset(14, 9), sz = UDim2.new(1, -28, 0, 18)})
+	end
+	if lobby.host == me then
+		button(content, "START GAME", C.green, startGame, #lobby.members >= 2)
+		button(content, "Add bot  (practice / solo)", C.purple, addBot, #lobby.members < MAX_PLAYERS)
+		if #lobby.members < 2 then lbl(content, "Need at least 2 players - add a bot to play solo.", {color = C.muted, size = 12}) end
+	else
+		lbl(content, "Waiting for the host to start...", {color = C.muted})
+	end
+	button(content, "Leave lobby", C.panel2, leave)
+end
+
+local function viewMenu()
+	local c = card(74)
+	lbl(c, ("Lives <b>%d</b>   Max players <b>%d</b>   Items <b>%s</b>"):format(CONFIG.rules.lives, MAX_PLAYERS, CONFIG.rules.items and "on" or "off"),
+		{pos = UDim2.fromOffset(14, 10), sz = UDim2.new(1, -28, 0, 18), size = 13})
+	lbl(c, "Shoot yourself for another turn on a blank, or shoot an opponent and hand them the gun. Last one alive wins.",
+		{pos = UDim2.fromOffset(14, 30), sz = UDim2.new(1, -28, 0, 38), size = 12, color = C.muted})
+	button(content, "CREATE LOBBY", C.green, createLobby)
+	if pending then lbl(content, "Joining... waiting for the host to answer", {color = C.gold, size = 13}) end
+	section("OPEN LOBBIES")
+	if USE_NTFY then
+		button(content, "Refresh lobbies", C.panel2, function()
+			if os.clock() - (lobbyRefreshAt or 0) < 4 then return end
+			lobbyRefreshAt = os.clock()
+			send("HELLO:" .. enc(me))
+		end)
+	end
+	local any = false
+	for h, info in pairs(lobbies) do
+		if os.clock() - info.t < (USE_NTFY and 3600 or (CONFIG.relay.enabled and 12 or 25)) and h ~= me and Players:GetPlayerByUserId(h) then
+			any = true
+			local f = card(48)
+			lbl(f, "<b>" .. nameOf(h) .. "</b>", {pos = UDim2.fromOffset(14, 6), sz = UDim2.new(1, -110, 0, 18)})
+			lbl(f, ("%d / %d players"):format(info.n, MAX_PLAYERS), {pos = UDim2.fromOffset(14, 26), sz = UDim2.new(1, -110, 0, 16), size = 12, color = C.muted})
+			button(f, "JOIN", C.blue, function()
+				pending = h
+				send("JOIN:" .. enc(h))
+				refresh()
+				task.delay(6, function() pending = nil refresh() end)
+			end, info.n < MAX_PLAYERS and pending == nil, 30, UDim2.fromOffset(80, 30), UDim2.new(1, -92, 0.5, -15))
+		end
+	end
+	if not any then lbl(content, "No lobbies found. Create one!", {color = C.muted, size = 13}) end
+end
+
+function refresh()
+	if not alive or not gui.Parent then return end
+	local pos = content.CanvasPosition
+	ord = 0
+	for _, c in ipairs(content:GetChildren()) do if c:IsA("GuiObject") then c:Destroy() end end
+	local ok, err = pcall(function()
+		if G then viewGame() elseif lobby then viewLobby() else viewMenu() end
+	end)
+	if not ok then warn("[RR] UI error: " .. tostring(err)) net.err = "ui: " .. tostring(err):sub(1, 40) end
+	content.CanvasPosition = pos
+	updateMusic()
+	pcall(updateRoom)
+end
+
+local function applyLives(str) for i, id in ipairs(G.order) do G.lives[id] = tonumber(str:sub(i, i)) or 0 end end
+local function applyCuff(str) for i, id in ipairs(G.order) do G.cuff[id] = str:sub(i, i) == "1" end end
+local function decodeItems(str)
+	local parts = split(str or "", ",")
+	for i, id in ipairs(G.order) do
+		local list = {}
+		for ch in (parts[i] or ""):gmatch(".") do list[#list + 1] = ch end
+		G.items[id] = list
+	end
+end
+local LIVE_TXT, BLANK_TXT = "<font color='#ff4040'>LIVE</font>", "<font color='#5aa0ff'>BLANK</font>"
+
+function endGame()
+	for ch in pairs(ragdolls) do unragdoll(ch) end
+	clearGun() camRelease() fx.tension(false) fx.bars(false)
+	G, lobby, HS = nil, nil, nil
+	hostBusy, spun, shells, cuffPick = false, false, {}, false
+	refresh()
+end
+
+local function resShot(p)
+	local shooter, target, live = dec(p[2]), dec(p[3]), p[4] == "l"
+	local lives, newHolder, dmg = p[5], dec(p[6]), tonumber(p[9]) or 1
+	local liveLeft, blankLeft, cuffs = tonumber(p[7]), tonumber(p[8]), p[10] or ""
+	local selfShot = shooter == target
+	local sch, tch = charOf(shooter), charOf(target)
+	local aimT = selfShot and T.selfAim or T.aim
+
+	if G.holder ~= shooter or not gun.model or gun.id ~= shooter then setHolder(shooter) G.holder = shooter end
+	snd("click")
+	local shellTxt = ("%d bullets remain in the cylinder"):format(G.bulletsLeft or 6)
+	banner(selfShot and (nameOf(shooter) .. " puts the gun to their head...") or (nameOf(shooter) .. " aims at " .. nameOf(target) .. "..."), shellTxt, aimT + T.pause)
+	log(selfShot and ("<b>" .. nameOf(shooter) .. "</b> points the gun at themselves") or ("<b>" .. nameOf(shooter) .. "</b> points the gun at <b>" .. nameOf(target) .. "</b>"))
+	fx.tension(true) fx.bars(true)
+	cinematic(shooter, target, aimT + T.pause)
+	if shooter == me and not selfShot then faceTarget(sch, tch) end
+
+	local mine = gun.arm and gun.id == shooter
+	if mine then poseGun("ready", 0.38, Enum.EasingStyle.Back) end
+	task.wait(0.25)
+	if not G then return end
+	if mine then poseGun(selfShot and "self" or "aim", 0.55, Enum.EasingStyle.Quint) end
+	task.wait(0.75)
+	if not G then return end
+	task.wait(math.max(0, aimT - 1.0))
+	if not G then return end
+	if mine then cockHammer() tremble(T.pause, 1.4) end
+	task.wait(T.pause)
+	if not G then return end
+
+	camCancel()
+	fireFx()
+	camPunch(live and 14 or 4)
+	if live then
+		snd("shot") snd("hit")
+		fx.flash(Color3.fromRGB(255, 0, 0), 0.3) fx.shake(1.2, 0.55)
+		applyLives(lives)
+		local dir = Vector3.zero
+		local sr, tr = sch and sch:FindFirstChild("HumanoidRootPart"), tch and tch:FindFirstChild("HumanoidRootPart")
+		if sr and tr then
+			dir = (tr.Position - sr.Position) * Vector3.new(1, 0, 1)
+			dir = dir.Magnitude > 0.01 and dir.Unit or Vector3.zero
+		elseif selfShot and sr then
+			dir = -sr.CFrame.LookVector
+		end
+		hitFx(tch)
+		local remainingLives = G.lives[target] or 0
+		local dead = remainingLives <= 0
+		local finalHit = remainingLives <= 1
+		if not dead and remainingLives == 1 then
+			snd("lastLife")
+			if CONFIG.bloodFX.finalScreenFlash then
+				fx.flash(Color3.fromRGB(160, 0, 12), 0.48)
+				fx.shake(1.8, 0.75)
+			end
+		end
+		if finalHit then snd("limbHit", 0.8) end
+		if finalHit then snd("finalImpact", 0.75) end
+		burst(tch, Color3.fromRGB(150, 12, 25), finalHit and CONFIG.bloodFX.lastLifeBurst or 24, finalHit)
+		ragdoll(tch, dead, dir)
+		if dead then
+			snd("death")
+			popText(tch, "ELIMINATED", Color3.fromRGB(255, 50, 50))
+			banner("<font color='#ff3030'>" .. nameOf(target):upper() .. " HAS DIED</font>", "eliminated for good", T.after)
+			log("<font color='#ff3030'><b>" .. nameOf(target) .. "</b> was killed</font>")
+			if target == me and CONFIG.deathKillsCharacter then task.delay(1.8, killMe) end
+		else
+			popText(tch, "-" .. dmg, Color3.fromRGB(255, 70, 70))
+			banner("<font color='#ff4040'>BANG!</font>", nameOf(target) .. " loses " .. dmg .. (dmg > 1 and " lives" or " life"), T.after)
+			log("<font color='#ff5050'>BANG</font> - <b>" .. nameOf(target) .. "</b> loses " .. dmg .. (dmg > 1 and " lives" or " life"))
+		end
+	else
+		snd("click")
+		fx.shake(0.15, 0.3)
+		popText(tch, "CLICK", Color3.fromRGB(110, 170, 255))
+		banner("<font color='#5aa0ff'>*CLICK*</font>", "blank", T.after)
+		log("<font color='#5aa0ff'>click</font> - blank" .. (selfShot and (" - <b>" .. nameOf(shooter) .. "</b> goes again") or ""))
+	end
+	G.live, G.blank = liveLeft, blankLeft
+	G.bulletsLeft = math.max(0, (liveLeft or 0) + (blankLeft or 0))
+	applyCuff(cuffs)
+	refresh()
+	if mine and gun.id == shooter then task.delay(0.5, function() if gun.id == shooter then poseGun("idle", 0.8, Enum.EasingStyle.Sine) end end) end
+
+	task.wait(T.after * 0.6)
+	camRelease() fx.tension(false) fx.bars(false)
+	task.wait(T.after * 0.4)
+	if not G then return end
+	G.holder = newHolder
+	setHolder(newHolder)
+	refresh()
+end
+
+function apply(cmd, p)
+	local h = dec(p[1] or "")
+	if not h then return end
+	if cmd == "LOBBY" then
+		if h ~= me then lobbies[h] = {t = os.clock(), n = tonumber(p[2]) or 1} end
+		refresh()
+	elseif cmd == "HELLO" then
+		if lobby and lobby.host == me and not G then bcast("LOBBY", enc(me), #lobby.members) end
+	elseif cmd == "LST" then
+		local ids = parseIds(p[2])
+		if table.find(ids, me) then lobby = {host = h, members = ids} pending = nil
+		elseif lobby and lobby.host == h then lobby = nil end
+		refresh()
+	elseif cmd == "CLOSE" then
+		if (lobby and lobby.host == h) or (G and G.host == h) then
+			if G then banner("The game was closed", "", 3) endGame() end
+			lobby = nil
+			refresh()
+		end
+	elseif cmd == "ROUND" then
+		local ids = parseIds(p[2])
+		if not table.find(ids, me) then return end
+		if G and G.host ~= h then return end
+		if not G then
+			G = {host = h, order = ids, lives = {}, items = {}, cuff = {}, over = false}
+			lobby, pending, cuffPick = nil, nil, false
+		end
+		applyLives(p[3]) decodeItems(p[8]) applyCuff(p[9] or "")
+		G.holder, G.live, G.blank, G.round = dec(p[4]), tonumber(p[5]), tonumber(p[6]), tonumber(p[7])
+		G.bulletsLeft = BULLETS_PER_ROUND
+		G.busy, G.spun = true, false
+		snd("load")
+		banner("ROUND " .. G.round, "6 BULLETS IN THE CYLINDER", T.roundIntro - 0.5)
+		log(("<b>Round %d</b> begins • 6 bullets loaded"):format(G.round))
+		if G.holder ~= gun.id or not gun.model then setHolder(G.holder) end
+		refresh()
+	elseif cmd == "SPIN" and G then
+		G.busy, G.spun = true, true
+		snd("spin") spinGunFx()
+		banner(nameOf(dec(p[2])) .. " spins the cylinder...", "", T.spin)
+		log("<b>" .. nameOf(dec(p[2])) .. "</b> spins the cylinder")
+		refresh()
+	elseif cmd == "ITEM" and G then
+		local user, code, tgt, extra = dec(p[2]), p[3], p[4], p[5]
+		local it = ITEMS[code] or {name = "?", desc = ""}
+		G.busy = true
+		applyLives(p[6]) decodeItems(p[7]) applyCuff(p[8] or "")
+		G.live, G.blank = tonumber(p[10]) or G.live, tonumber(p[11]) or G.blank
+		G.bulletsLeft = math.max(0, (G.live or 0) + (G.blank or 0))
+		snd("item")
+		local ok, err = pcall(playItemModel, code, user)
+		if not ok then warn("[RR] item model: " .. tostring(err)) end
+		banner(nameOf(user) .. " uses the " .. it.name, it.desc, T.item)
+		log("<b>" .. nameOf(user) .. "</b> uses <font color='#b9a8ff'>" .. it.name .. "</font>")
+		if code == "m" and user == me then
+			task.delay(0.8, function()
+				if G then
+					banner("The current shell is " .. (extra == "l" and LIVE_TXT or BLANK_TXT), "only you can see this", T.item)
+					log("You peeked: " .. (extra == "l" and LIVE_TXT or BLANK_TXT))
+				end
+			end)
+		elseif code == "b" then
+			task.delay(0.8, function()
+				if G then
+					banner("Ejected a " .. (extra == "l" and LIVE_TXT or BLANK_TXT) .. " shell", "", T.item)
+					log("Ejected shell was " .. (extra == "l" and LIVE_TXT or BLANK_TXT))
+				end
+			end)
+		elseif code == "c" then
+			fx.flash(Color3.fromRGB(60, 200, 90), 0.8) hitFx(charOf(user), Color3.fromRGB(60, 200, 90))
+			popText(charOf(user), "+1", Color3.fromRGB(90, 230, 120))
+		elseif code == "h" then
+			local t = dec(tgt or "")
+			if t then
+				log("<b>" .. nameOf(t) .. "</b> is handcuffed") hitFx(charOf(t), Color3.fromRGB(90, 160, 255))
+				popText(charOf(t), "CUFFED", Color3.fromRGB(110, 170, 255))
+			end
+		end
+		refresh()
+	elseif cmd == "READY" and G then
+		G.busy, G.spun, G.waitUntil = false, false, 0
+		refresh()
+		if G.host == me then botTurn() end
+	elseif cmd == "RES" and G then
+		G.busy, G.spun = true, false
+		refresh()
+		task.spawn(function()
+			local ok, err = pcall(resShot, p)
+			if not ok then warn("[RR] shot error: " .. tostring(err)) net.err = tostring(err):sub(1, 50) end
+		end)
+	elseif cmd == "LEFT" and G then
+		local id = dec(p[2])
+		applyLives(p[3])
+		G.holder = dec(p[4])
+		setHolder(G.holder)
+		banner(nameOf(id) .. " left the game", "", 2.5)
+		log("<b>" .. nameOf(id) .. "</b> left")
+		refresh()
+	elseif cmd == "WIN" and G then
+		local w = dec(p[2])
+		G.over, G.winner = true, w
+		camRelease() fx.tension(false) fx.bars(false)
+		snd("win")
+		banner("<font color='#ffd040'>" .. nameOf(w):upper() .. " WINS</font>", "the last one standing", 8)
+		log("<font color='#ffd040'><b>" .. nameOf(w) .. "</b> wins!</font>")
+		popText(charOf(w), "WINNER", Color3.fromRGB(255, 208, 64))
+		refresh()
+		task.delay(10, function() if G and G.over then endGame() end end)
+	end
+end
+
+local function packLives() local s = "" for _, id in ipairs(HS.order) do s ..= tostring(HS.lives[id] or 0) end return s end
+local function packCuff() local s = "" for _, id in ipairs(HS.order) do s ..= HS.cuff[id] and "1" or "0" end return s end
+local function packItems()
+	local r = {}
+	for _, id in ipairs(HS.order) do r[#r + 1] = table.concat(HS.items[id] or {}) end
+	return table.concat(r, ",")
+end
+local function nextAliveHS(id)
+	local order = HS.order
+	local idx = table.find(order, id) or 1
+	for step = 1, #order - 1 do
+		local cand = order[(idx - 1 + step) % #order + 1]
+		if (HS.lives[cand] or 0) > 0 then return cand end
+	end
+	return id
+end
+local function survivors()
+	local t = {}
+	for _, id in ipairs(HS.order) do if (HS.lives[id] or 0) > 0 then t[#t + 1] = id end end
+	return t
+end
+
+function hostNew(members)
+	HS = {order = members, lives = {}, items = {}, cuff = {}, round = 0, holder = members[1]}
+	for _, id in ipairs(members) do
+		HS.lives[id] = CONFIG.rules.lives
+		HS.items[id] = {}
+		HS.cuff[id] = false
+	end
+	hostBusy, spun = false, false
+end
+
+local function dealItems()
+	local R = CONFIG.rules
+	if not R.items or #R.itemPool == 0 then return end
+	for _, id in ipairs(HS.order) do
+		if (HS.lives[id] or 0) > 0 then
+			for _ = 1, R.itemsPerRound do
+				if #HS.items[id] < R.maxItems then
+					local i = math.random(#R.itemPool)
+					table.insert(HS.items[id], R.itemPool:sub(i, i))
+				end
+			end
+		end
+	end
+end
+
+function startRound(holder)
+	HS.round += 1
+	HS.holder, HS.botKnow = holder, nil
+	spun = false
+	local live, blank = rollShells()
+	dealItems()
+	hostBusy = true
+	bcast("ROUND", enc(me), idsStr(HS.order), packLives(), enc(holder), live, blank, HS.round, packItems(), packCuff())
+	task.delay(T.roundIntro, function()
+		if HS then bcast("READY", enc(me)) hostBusy = false end
+	end)
+end
+
+local function resolveCuffs(cand)
+	local guard = 0
+	while HS.cuff[cand] and guard < 8 do
+		HS.cuff[cand] = false
+		cand = nextAliveHS(cand)
+		guard += 1
+	end
+	return cand
+end
+
+local function hostShoot(from, tgt)
+	hostBusy, spun = true, false
+	HS.botKnow = nil
+	local selfShot = from == tgt
+	local live = table.remove(shells, 1)
+	local dmg = 1
+	if live then HS.lives[tgt] = math.max(0, (HS.lives[tgt] or 0) - dmg) end
+	local nextH
+	if not selfShot then nextH = tgt elseif live then nextH = nextAliveHS(from) else nextH = from end
+	if (HS.lives[nextH] or 0) <= 0 then nextH = nextAliveHS(nextH) end
+	nextH = resolveCuffs(nextH)
+	HS.holder = nextH
+	local l, b = counts()
+	bcast("RES", enc(me), enc(from), enc(tgt), live and "l" or "b", packLives(), enc(nextH), l, b, dmg, packCuff())
+	local alive_ = survivors()
+	local total = (selfShot and T.selfAim or T.aim) + T.pause + T.after + T.pass + 0.6
+	task.delay(total, function()
+		if not HS then return end
+		local liveLeft = (counts())
+		if #alive_ <= 1 then
+			HS.over = true
+			bcast("WIN", enc(me), enc(alive_[1] or from))
+			hostBusy = false
+		elseif liveLeft == 0 then
+			startRound(nextH)
+		else
+			bcast("READY", enc(me))
+			hostBusy = false
+		end
+	end)
+end
+
+local function hostItem(from, code, target)
+	local list = HS.items[from]
+	local idx = list and table.find(list, code)
+	if not idx then return end
+	local extra, tgtStr = "", ""
+	local ejectedLive = false
+	if code == "m" then
+		if #shells == 0 then return end
+		extra = shells[1] and "l" or "b"
+		if isBot(from) then HS.botKnow = {id = from, live = shells[1]} end
+	elseif code == "b" then
+		if #shells == 0 then return end
+		local live = table.remove(shells, 1)
+		ejectedLive = live
+		extra = live and "l" or "b"
+		HS.botKnow = nil
+	elseif code == "c" then
+		if (HS.lives[from] or 0) >= CONFIG.rules.maxLives then return end
+		HS.lives[from] += 1
+	elseif code == "h" then
+		local t = dec(target or "")
+		if not t or t == from or (HS.lives[t] or 0) <= 0 or HS.cuff[t] then return end
+		HS.cuff[t] = true
+		tgtStr = enc(t)
+	else
+		return
+	end
+	table.remove(list, idx)
+	hostBusy = true
+	local l, b = counts()
+	bcast("ITEM", enc(me), enc(from), code, tgtStr, extra, packLives(), packItems(), packCuff(), 0, l, b)
+	task.delay(T.item + 0.4, function()
+		if not HS then return end
+		if code == "b" and (#shells == 0 or ejectedLive) then
+			startRound(from)
+		else
+			bcast("READY", enc(me))
+			hostBusy = false
+		end
+	end)
+end
+
+function hostAct(from, action, a1, a2)
+	if not HS or HS.over or hostBusy or HS.holder ~= from or (HS.lives[from] or 0) <= 0 then return end
+	if action == "p" then
+		if spun and CONFIG.rules.spinOncePerTurn then return end
+		spun, hostBusy = true, true
+		HS.botKnow = nil
+		shuffle(shells)
+		bcast("SPIN", enc(me), enc(from))
+		task.delay(T.spin + 0.3, function()
+			if HS then bcast("READY", enc(me)) hostBusy = false end
+		end)
+	elseif action == "i" then
+		if CONFIG.rules.items then hostItem(from, a1, a2) end
+	elseif action == "s" then
+		if #shells > 0 then hostShoot(from, from) end
+	elseif action == "o" then
+		local t = dec(a1 or "")
+		if t and t ~= from and (HS.lives[t] or 0) > 0 and #shells > 0 then hostShoot(from, t) end
+	end
+end
+
+function hostPlayerLeft(id)
+	if not HS or HS.over or (HS.lives[id] or 0) <= 0 then return end
+	HS.lives[id] = 0
+	if HS.holder == id then HS.holder = nextAliveHS(id) end
+	bcast("LEFT", enc(me), enc(id), packLives(), enc(HS.holder))
+	local s = survivors()
+	if #s <= 1 then HS.over = true bcast("WIN", enc(me), enc(s[1] or me)) end
+end
+
+function botTurn()
+	if not HS or HS.over or HS.botPending then return end
+	local h = HS.holder
+	if not h or not isBot(h) then return end
+	HS.botPending = true
+	task.delay(rand(T.botThink[1], T.botThink[2]), function()
+		if not HS then return end
+		HS.botPending = false
+		if HS.over or HS.holder ~= h or hostBusy or (HS.lives[h] or 0) <= 0 then return end
+		local list = HS.items[h] or {}
+		local function has(c) return table.find(list, c) ~= nil end
+		local opp = {}
+		for _, id in ipairs(HS.order) do if id ~= h and (HS.lives[id] or 0) > 0 then opp[#opp + 1] = id end end
+		if #opp == 0 then return end
+		local l, b = counts()
+		local pLive = l / math.max(l + b, 1)
+		local known = HS.botKnow and HS.botKnow.id == h
+		local liveNow = known and HS.botKnow.live
+		if has("c") and HS.lives[h] < CONFIG.rules.maxLives then hostAct(h, "i", "c", "")
+		elseif has("m") and not known and math.random() < 0.8 then hostAct(h, "i", "m", "")
+		else
+			local cand = {}
+			for _, id in ipairs(opp) do if not HS.cuff[id] then cand[#cand + 1] = id end end
+			if has("h") and #cand > 0 and math.random() < 0.5 then
+				hostAct(h, "i", "h", enc(cand[math.random(#cand)]))
+			else
+				local shootSelf
+				if known then shootSelf = not liveNow else shootSelf = b > 0 and (l == 0 or math.random() > pLive) end
+				if shootSelf then
+					hostAct(h, "s", "", "")
+				else
+					hostAct(h, "o", enc(opp[math.random(#opp)]), "")
+				end
+			end
+		end
+		task.delay(1, function() if HS and HS.holder == h and not hostBusy then botTurn() end end)
+	end)
+end
+
+local function watchPlayer(plr)
+	connect(plr.CharacterAdded, function()
+		task.wait(0.9)
+		if not G then return end
+		if plr == lp and not G.over and (G.lives[me] or 1) <= 0 and CONFIG.deathKillsCharacter then killMe() end
+		if G.holder == plr.UserId and not G.over then setHolder(G.holder) end
+	end)
+end
+for _, plr in ipairs(Players:GetPlayers()) do watchPlayer(plr) end
+connect(Players.PlayerAdded, watchPlayer)
+
+connect(Players.PlayerRemoving, function(plr)
+	local id = plr.UserId
+	lobbies[id] = nil
+	if G and G.host == id then
+		banner("The host left", "", 3) endGame()
+	elseif G and G.host == me then
+		hostPlayerLeft(id)
+	elseif lobby and lobby.host == me then
+		local i = table.find(lobby.members, id)
+		if i then table.remove(lobby.members, i) bcast("LST", enc(me), idsStr(lobby.members)) end
+	elseif lobby and lobby.host == id then
+		lobby = nil
+	end
+	refresh()
+end)
+
+task.spawn(function()
+	local t = 0
+	while alive do
+		task.wait(1)
+		t += 1
+		statusLbl.Text = ("chat sent %d | received %d%s"):format(net.sent, net.recv, net.err ~= "" and (" | " .. net.err) or "")
+		if lobby and lobby.host == me and not G and not USE_NTFY and t % (CONFIG.relay.enabled and 4 or 10) == 0 then
+			local hasBot = false
+			for _, id in ipairs(lobby.members) do if isBot(id) then hasBot = true end end
+			if CONFIG.relay.enabled or not (hasBot and not humansInGame()) then bcast("LOBBY", enc(me), #lobby.members) end
+		end
+		if G and G.busy and not G.over and G.stamp and os.clock() - G.stamp > 40 then G.busy = false end
+		if G then G.stamp = G.busy and (G.stamp or os.clock()) or nil end
+		if not G and not lobby then refresh() end
+		if G and not G.busy and (G.waitUntil or 0) > 0 and os.clock() > G.waitUntil then G.waitUntil = 0 refresh() end
+	end
+end)
+
+local function cleanup()
+	alive = false
+	pcall(function() if relay.ws then relay.ws:Close() end end)
+	for _, c in ipairs(conns) do c:Disconnect() end
+	for ch in pairs(ragdolls) do pcall(unragdoll, ch) end
+	if armOverrideConnection then pcall(function() armOverrideConnection:Disconnect() end) end
+	for j, c0 in pairs(bases) do pcall(function() j.C0 = c0; j.Transform = CFrame.identity end) end
+	clearGun()
+	pcall(function() clearRoom(true) end)
+	camRelease()
+	setMusic(nil)
+	pcall(function() cc:Destroy() blur:Destroy() end)
+	pcall(function() if coltTemplate then coltTemplate:Destroy() end end)
+	if TCS.ChatVersion == Enum.ChatVersion.TextChatService then
+		pcall(function() TCS.OnIncomingMessage = function() end end)
+		pcall(function() TCS.OnBubbleAdded = function() end end)
+	end
+	gui:Destroy()
+	env.RR_CLEANUP = nil
+end
+env.RR_CLEANUP = cleanup
+closeB.Activated:Connect(function() pcall(leave) cleanup() end)
+
+refresh()
